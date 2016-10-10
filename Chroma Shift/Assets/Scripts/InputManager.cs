@@ -18,29 +18,44 @@ public class InputManager : MonoBehaviour {
 	}
 
 	//delegate for input
-	public delegate void KeyEvent();
+	public delegate void KeyDownEvent();
+	public delegate void KeyUpEvent();
+	//delegate for input with a bool parameter. The bool is needed because the function will have 2 seperate events
+	public delegate void AdvancedKeyEvent(bool param);
 	//public delegate void KeyEvent(float param);
 	public delegate void AxisEvent(float axisValue);
 
 	//Input events
-	public event KeyEvent Jump;
-	public event KeyEvent Attack;
-	public event KeyEvent Block;
-	public event KeyEvent Pause;
+	public event KeyDownEvent Jump;
+	public event KeyDownEvent DoubleJump;
+	public event KeyDownEvent Hover;
+	public event KeyDownEvent Attack;
+	public event KeyDownEvent Block;
+	public event KeyUpEvent UnBlock;
+	public event KeyDownEvent Pause;
 	public event AxisEvent Run;
+	private string buttonName;
 
 	// Use this for initialization
 	void Start () 
 	{
+		buttonName = "";
 	}
 
 	void Update()
 	{
 		//if the Jump button is pushed and there are any subscribers
-		if (Input.GetButtonDown("Jump") && Jump != null)
+		if (Input.GetButtonDown("Jump"))
 		{
-			//Call the Jump event
-			Jump();
+			//subscribe all different jump event;
+			if (Jump != null)
+				Jump();
+
+			if (DoubleJump != null)
+				DoubleJump();
+
+			if (Hover != null)
+				Hover();
 		}
 		//if the Attack Button is pushed and there are subscribers
 		if (Input.GetButtonDown("Attack") && Attack != null)
@@ -54,11 +69,15 @@ public class InputManager : MonoBehaviour {
 			//Call the Run Event and link it to the horiztonal axis
 			Run(Input.GetAxis("Horizontal"));
 		}
-		//if the Block Button is pushed and there are sunscribers
-		if (Input.GetButton("Block") && Block != null)
+		//if the Block Button is pushed and there are subscribers
+		if (Input.GetButtonDown("Block") && Block != null)
 		{
 			//Call the block event
 			Block();
+		}
+		if (Input.GetButtonUp("Block") && UnBlock != null)
+		{
+			UnBlock();
 		}
 		//if the Pause Button is pushed and there are subscriberss
 		if (Input.GetButtonDown("Pause") && Pause != null)
