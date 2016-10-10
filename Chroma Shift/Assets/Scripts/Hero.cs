@@ -93,55 +93,64 @@ public class Hero : MonoBehaviour {
 		{
 			stats.currentShieldStrength -= 0.5f;
 		}
-		//Debug.DrawRay(transform.position + trig.bounds.extents, Vector2.right * stats.attackRange);
+		//if the heros shield doesnt depletes when it is hit
 		if (!depleteOnHit)
 		{
+			//start the shield timer
 			if (startShieldTimer)
 			{
-				Debug.Log(stats.currentShieldStrength);
+				//shield depletes based over time
 				stats.currentShieldStrength -= Time.deltaTime;
 			}
-			//if (!canBlock)
-			//StartCoroutine(HelperFunctions.TransitionTransparency(shieldBar, 0.1f));
 		}
+		//players shield depletes when it is hit
 		else
 		{
+			//if the player is not blocking and their shield strength is not at its max capacity
 			if (!isBlocking && stats.currentShieldStrength < stats.shieldCapacity)
 			{
+				//increase their shield strength over time
 				stats.currentShieldStrength += Time.deltaTime;
-
+				//check if their shield is full
 				CheckShieldFull();
 			}
 				
 		}
+		//if there shield is empty
 		if (stats.currentShieldStrength <= 0.0f)
 		{
+			//their shield is broken and they can not use it 
 			ShieldDepleted();
 		}
+		//if the player can not block
 		if (!canBlock)
 		{
+			//recharge their shield over time
 			stats.currentShieldStrength += Time.deltaTime;
-
+			//check if their shield is full
 			CheckShieldFull();
 		}
+		//make the x scale of the shield bar image equal the heros current shield strength / their max shield strength (value between 0-1)
 		shieldBar.rectTransform.localScale = new Vector2(stats.currentShieldStrength / stats.shieldCapacity, 1.0f);
 
 	}
 	private void CheckShieldFull()
 	{
+		//if the players shield s full 
 		if (stats.currentShieldStrength >= stats.shieldCapacity)
 		{
-			//StopAllCoroutines();
+			//check to see if the coroutine is still running
 			if(transparencyCor != null)
 			{
+				//stop it from running
 				StopCoroutine(transparencyCor);
 				transparencyCor = null;
 			}
-
+			// dont let their shield capcity go higher than the max capacity
 			stats.currentShieldStrength = stats.shieldCapacity;
-
+			//Fade out the shield bar image
 			shieldBar.CrossFadeAlpha(0.01f, 0.4f, false);
-
+			//player can block once again
 			canBlock = true;
 		}
 	}
@@ -192,6 +201,7 @@ public class Hero : MonoBehaviour {
 	{
 		if (canBlock)
 		{
+			//display their shield bar
 			shieldBar.CrossFadeAlpha(1f, 0.4f, false);
 
 			if (depleteOnHit)
@@ -201,15 +211,19 @@ public class Hero : MonoBehaviour {
 			}
 			else
 			{
-				startShieldTimer = true;
 				//player has pushed the block button is temporarily invinsible
+				startShieldTimer = true;
 			}
 		}
 	}
 	protected virtual void UnBlock()
 	{
+		//if their shield breaks on impact
 		if (depleteOnHit)
 		{
+			//check if their shield is full
+			CheckShieldFull();
+			//they are no longer blocking because they let go of the block keypress
 			isBlocking = false;
 		}
 
@@ -218,11 +232,13 @@ public class Hero : MonoBehaviour {
 	{
 		// this will get increased in update because canBlock is false
 		stats.currentShieldStrength = 0.0f;
+		//player can no longer block 
 		canBlock = false;
 		startShieldTimer = false;
 
 		if(transparencyCor == null) 
 		{
+			//start the coroutine to let the player know their shield is depleted and they cant use it
 			transparencyCor = StartCoroutine(HelperFunctions.TransitionTransparency(shieldBar, 0.1f));
 		}
 	}
