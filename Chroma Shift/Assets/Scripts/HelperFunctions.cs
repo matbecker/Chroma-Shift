@@ -14,4 +14,17 @@ public static class HelperFunctions {
 			yield return new WaitForSeconds(duration);
 		}
 	}
+	public static Vector3 ArcTowards(Transform start, Transform end, float angle)
+	{
+		var direction = end.position - start.position;
+		var height = direction.y;
+		direction.y = 0;
+		var distance = direction.magnitude;
+		var a = angle * Mathf.Deg2Rad;
+		direction.y = distance * Mathf.Tan(a);
+		distance += height / Mathf.Tan(a);
+		var velocity = Mathf.Sqrt(distance * Physics.gravity.magnitude / Mathf.Sin(2 * a));
+
+		return velocity * direction.normalized;
+	}
 }

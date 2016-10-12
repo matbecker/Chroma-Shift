@@ -15,6 +15,7 @@ public class Hero : MonoBehaviour {
 		public float shieldCapacity;
 		public float attackRange;
 		public float attackSpeed;
+		public float attackCooldownRate;
 		public Vector2 maxVelocity;
 		public Vector2 jumpForce;
 		public Vector2 movementForce;
@@ -27,15 +28,19 @@ public class Hero : MonoBehaviour {
 	[SerializeField] protected LayerMask groundLayers;
 	[SerializeField] protected LayerMask attackLayers;
 	[SerializeField] protected Image shieldBar;
-	[SerializeField] protected bool grounded;
-	[SerializeField] protected bool startShieldTimer;
-	[SerializeField] protected bool canBlock;
-	[SerializeField] protected bool isBlocking;
-	[SerializeField] protected bool rechargeShield;
 	[SerializeField] protected bool depleteOnHit;
 	[SerializeField] protected bool rangedAttack;
-
+	private bool grounded;
+	private bool startShieldTimer;
+	private bool canBlock;
+	private bool isBlocking;
+	private bool canAttack;
+	protected bool isAttacking;
+	private bool rechargeShield;
+	private float timer;
 	private Coroutine transparencyCor;
+	[SerializeField] GameObject projectile;
+	protected GameObject tmpProjectile;
 
 	// Use this for initialization
 	protected virtual void Start () 
@@ -48,6 +53,7 @@ public class Hero : MonoBehaviour {
 		InputManager.Instance.Attack += Attack;
 		//register Block event
 		InputManager.Instance.Block += Block;
+		//register UnBlock Event
 		InputManager.Instance.UnBlock += UnBlock;
 		//get the rigidbody of the gameobject
 		rb = gameObject.GetComponent<Rigidbody2D>();
@@ -67,9 +73,11 @@ public class Hero : MonoBehaviour {
 		shieldBar = gameObject.GetComponentInChildren<Image>();
 		//the player can block when they start
 		canBlock = true;
+		//the player can attack when they start
+		canAttack = true;
 		//ensure the players shieldbar is not showing
 		shieldBar.canvasRenderer.SetAlpha(0.01f);
-
+		//null the co-routine
 		transparencyCor = null;
 	}
 	protected virtual void OnDestroy () 
@@ -80,8 +88,9 @@ public class Hero : MonoBehaviour {
 		InputManager.Instance.Run -= Run;
 		//unregister attack event
 		InputManager.Instance.Attack -= Attack;
-		//unregister Block event
+		//unregister block event
 		InputManager.Instance.Block -= Block;
+		//unregister unBlock event
 		InputManager.Instance.UnBlock -= UnBlock;
 	}
 
@@ -89,9 +98,20 @@ public class Hero : MonoBehaviour {
 	// Update is called once per frame
 	protected virtual void Update () 
 	{
-		if (Input.GetKeyDown("t"))
+		//if the player has attacked
+		if (isAttacking)
 		{
-			stats.currentShieldStrength -= 0.5f;
+			//start a timer
+			timer += Time.deltaTime;
+
+			//if the timer is greater than the attack cooldown rate
+			if (timer >= stats.attackCooldownRate)
+			{
+				//reset the timer
+				timer = 0.0f;
+				//player can attack again
+				isAttacking = false;
+			}
 		}
 		//if the heros shield doesnt depletes when it is hit
 		if (!depleteOnHit)
@@ -99,7 +119,7 @@ public class Hero : MonoBehaviour {
 			//start the shield timer
 			if (startShieldTimer)
 			{
-				//shield depletes based over time
+				//shield depletes over time once the hero starts blocking
 				stats.currentShieldStrength -= Time.deltaTime;
 			}
 		}
@@ -116,7 +136,7 @@ public class Hero : MonoBehaviour {
 			}
 				
 		}
-		//if there shield is empty
+		//if their shield is empty
 		if (stats.currentShieldStrength <= 0.0f)
 		{
 			//their shield is broken and they can not use it 
@@ -136,7 +156,7 @@ public class Hero : MonoBehaviour {
 	}
 	private void CheckShieldFull()
 	{
-		//if the players shield s full 
+		//if the players shield is full 
 		if (stats.currentShieldStrength >= stats.shieldCapacity)
 		{
 			//check to see if the coroutine is still running
@@ -154,52 +174,68 @@ public class Hero : MonoBehaviour {
 			canBlock = true;
 		}
 	}
-	protected virtual void Jump()
+	private void Jump()
 	{
-		//if the player is on the ground layer then apply a force in the y direction
-		if (GroundCheck())
-			rb.AddForce(stats.jumpForce);
-
-		if (rb.velocity.y > stats.maxVelocity.y)
-			rb.velocity = new Vector2(rb.velocity.x, stats.maxVelocity.y);
-	}
-	protected virtual void Run(float horizontalAxis)
-	{
-		if (horizontalAxis > 0)
+		//if the player is not blocking
+		if (!isBlocking)
 		{
-			rb.AddForce(stats.movementForce);
+			//if the player is on the ground layer then apply a force in the y direction
+			if (GroundCheck())
+				rb.AddForce(stats.jumpForce);
 
-			//limit player velocity in right direction
-			if (rb.velocity.x > stats.maxVelocity.x)
-				rb.velocity = new Vector2(stats.maxVelocity.x, rb.velocity.y);
+			if (rb.velocity.y > stats.maxVelocity.y)
+				rb.velocity = new Vector2(rb.velocity.x, stats.maxVelocity.y);
 		}
-		if (horizontalAxis < 0)
-		{
-			rb.AddForce(-stats.movementForce);
 
-			//limit players velocity in left direction
-			if (rb.velocity.x < -stats.maxVelocity.x) 
-				rb.velocity = new Vector2(-stats.maxVelocity.x, rb.velocity.y);
+	}
+	private void Run(float horizontalAxis)
+	{
+		//if the player is not blocking
+		if (!isBlocking)
+		{
+			if (horizontalAxis > 0)
+			{
+				rb.AddForce(stats.movementForce);
+
+				//limit player velocity in right direction
+				if (rb.velocity.x > stats.maxVelocity.x)
+					rb.velocity = new Vector2(stats.maxVelocity.x, rb.velocity.y);
+			}
+			if (horizontalAxis < 0)
+			{
+				rb.AddForce(-stats.movementForce);
+
+				//limit players velocity in left direction
+				if (rb.velocity.x < -stats.maxVelocity.x) 
+					rb.velocity = new Vector2(-stats.maxVelocity.x, rb.velocity.y);
+			}
 		}
 	}
 	protected virtual void Attack()
 	{
-		if (rangedAttack)
+		//if the player is not blocking they can attack and they havent already attacked
+		if (!isBlocking && canAttack && !isAttacking)
 		{
-			Debug.Log("Ranged Attack!");
-		}
-		else
-		{
-			RaycastHit2D hit = Physics2D.Raycast(transform.position + trig.bounds.extents, Vector2.right, stats.attackRange, attackLayers);
+			if (rangedAttack)
+			{
+				tmpProjectile = Instantiate(projectile, new Vector3(transform.position.x + col.bounds.extents.x, transform.position.y, transform.position.z), Quaternion.identity) as GameObject;
+				Debug.Log("Ranged Attack!");
+			}
+			else
+			{
+				RaycastHit2D hit = Physics2D.Raycast(transform.position + trig.bounds.extents, Vector2.right, stats.attackRange, attackLayers);
 
-			if (hit.collider != null)
-				Debug.Log("Attacking!");
+				if (hit.collider != null)
+					Debug.Log("Attacking!");
+			}
+			//the hero has attacked and will not be able to again until their cooldown is satisfied
+			isAttacking = true;
 		}
-
 	}
 	protected virtual void Block()
 	{
-		if (canBlock)
+		//if the player is not attacking and they can block
+		if (!isAttacking && canBlock)
 		{
 			//display their shield bar
 			shieldBar.CrossFadeAlpha(1f, 0.4f, false);
@@ -214,6 +250,8 @@ public class Hero : MonoBehaviour {
 				//player has pushed the block button is temporarily invinsible
 				startShieldTimer = true;
 			}
+			//hero can not attack if they are blocking
+			canAttack = false;
 		}
 	}
 	protected virtual void UnBlock()
@@ -226,9 +264,10 @@ public class Hero : MonoBehaviour {
 			//they are no longer blocking because they let go of the block keypress
 			isBlocking = false;
 		}
-
+		//The hero can attack once they are no longer blocking 
+		canAttack = true;
 	}
-	protected virtual void ShieldDepleted()
+	private void ShieldDepleted()
 	{
 		// this will get increased in update because canBlock is false
 		stats.currentShieldStrength = 0.0f;
@@ -242,7 +281,7 @@ public class Hero : MonoBehaviour {
 			transparencyCor = StartCoroutine(HelperFunctions.TransitionTransparency(shieldBar, 0.1f));
 		}
 	}
-	protected virtual bool GroundCheck()
+	private bool GroundCheck()
 	{
 		return Physics2D.OverlapCircle(col.bounds.center, 0.1f, groundLayers);
 	}
@@ -260,5 +299,4 @@ public class Hero : MonoBehaviour {
 			grounded = false;
 		}
 	}
-
 }

@@ -34,12 +34,10 @@ public class InputManager : MonoBehaviour {
 	public event KeyUpEvent UnBlock;
 	public event KeyDownEvent Pause;
 	public event AxisEvent Run;
-	private string buttonName;
 
 	// Use this for initialization
 	void Start () 
 	{
-		buttonName = "";
 	}
 
 	void Update()

@@ -36,25 +36,17 @@ public class Wizard : Hero {
 		}
 			
 	}
-	protected override void Jump()
-	{
-		base.Jump ();
-	}
-	protected override void Run (float horizontalAxis)
-	{
-		base.Run (horizontalAxis);
-	}
 	protected override void Attack ()
 	{
 		base.Attack ();
+
+		tmpProjectile.GetComponent<Rigidbody2D>().velocity = new Vector2(stats.attackSpeed, 0.0f);
+
+		tmpProjectile.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezePositionY;
 	}
 	protected override void Block ()
 	{
 		base.Block ();
-	}
-	protected override bool GroundCheck ()
-	{
-		return base.GroundCheck ();
 	}
 	protected override void OnCollisionStay2D (Collision2D other)
 	{

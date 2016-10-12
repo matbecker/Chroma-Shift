@@ -11,14 +11,6 @@ public class Swordsmen : Hero {
 	{
 		base.OnDestroy ();
 	}
-	protected override void Jump ()
-	{
-		base.Jump ();
-	}
-	protected override void Run (float horizontalAxis)
-	{
-		base.Run (horizontalAxis);
-	}
 	protected override void Attack ()
 	{
 		base.Attack ();
@@ -26,18 +18,6 @@ public class Swordsmen : Hero {
 	protected override void Block ()
 	{
 		base.Block ();
-	}
-	protected override bool GroundCheck ()
-	{
-		return base.GroundCheck ();
-	}
-	protected override void OnCollisionStay2D (Collision2D other)
-	{
-		base.OnCollisionStay2D (other);
-	}
-	protected override void OnCollisionExit2D (Collision2D other)
-	{
-		base.OnCollisionExit2D (other);
 	}
 	protected override void UnBlock()
 	{
