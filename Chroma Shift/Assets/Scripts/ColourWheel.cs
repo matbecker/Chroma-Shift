@@ -1,11 +1,12 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class ColorWheel : MonoBehaviour {
+public class ColourWheel : MonoBehaviour {
 
 	[SerializeField] int randDirection;
 	[SerializeField] float rotationSpeed;
 	[SerializeField] float spinTime;
+	[SerializeField] int rotationAngle;
 	private float timer;
 	private bool startSpinning;
 	// Use this for initialization
@@ -17,6 +18,8 @@ public class ColorWheel : MonoBehaviour {
 	// Update is called once per frame
 	void Update () 
 	{
+		rotationAngle = (int)transform.localEulerAngles.x;
+
 		if (startSpinning)
 		{
 			Spin();
@@ -34,24 +37,24 @@ public class ColorWheel : MonoBehaviour {
 	}
 	void Spin()
 	{
-		
+		//spin right
 		if (randDirection == 0)
 			gameObject.transform.Rotate(Vector3.right * (rotationSpeed * Time.deltaTime));
-		else
+		else //spin left
 			gameObject.transform.Rotate(Vector3.left * (rotationSpeed * Time.deltaTime));
 	}
 	void SlowDown()
 	{
-		rotationSpeed -= 0.5f;
+		//rotationSpeed -= 0.1f;
 
-		if (rotationSpeed < 0)
+		if (rotationAngle % 30 == 0)
 			StopSpinning();
 	}
 	void StopSpinning()
 	{
 		//reset variables
 		rotationSpeed = 0;
-		startSpinning = false;
+		//startSpinning = false;
 		timer = 0.0f;
 	}
 	void Shift()

@@ -17,12 +17,13 @@ public class InputManager : MonoBehaviour {
 
 	}
 
-	//delegate for input
+	//delegate for keyDown event
 	public delegate void KeyDownEvent();
+	//delegate for KeyUp event
 	public delegate void KeyUpEvent();
-	//delegate for input with a bool parameter. The bool is needed because the function will have 2 seperate events
-	public delegate void AdvancedKeyEvent(bool param);
-	//public delegate void KeyEvent(float param);
+	//delegate for Mouse event
+	public delegate void MouseEvent(float x, float y);
+	//delegate for Axis event
 	public delegate void AxisEvent(float axisValue);
 
 	//Input events
@@ -31,9 +32,12 @@ public class InputManager : MonoBehaviour {
 	public event KeyDownEvent Hover;
 	public event KeyDownEvent Attack;
 	public event KeyDownEvent Block;
+	public event KeyDownEvent SwitchColour;
+	public event KeyDownEvent SwitchShade;
 	public event KeyUpEvent UnBlock;
 	public event KeyDownEvent Pause;
 	public event AxisEvent Run;
+	public event MouseEvent TrackMouseEvent;
 
 	// Use this for initialization
 	void Start () 
@@ -73,8 +77,10 @@ public class InputManager : MonoBehaviour {
 			//Call the block event
 			Block();
 		}
+		//if the Block Button is released and there are subscribers
 		if (Input.GetButtonUp("Block") && UnBlock != null)
 		{
+			//call the UnBlock event
 			UnBlock();
 		}
 		//if the Pause Button is pushed and there are subscriberss
@@ -82,6 +88,24 @@ public class InputManager : MonoBehaviour {
 		{
 			//Call the pause event
 			Pause();
+		}
+		//if the SwitchColour button is pushed and there are subscribers
+		if (Input.GetButtonDown("SwitchColour") && SwitchColour != null)
+		{
+			//call the SwitchColour event
+			SwitchColour();
+		}
+		//if the SwitchShade button is pushed and there are subscribers
+		if (Input.GetButtonDown("SwitchShade") && SwitchShade != null)
+		{
+			//call the SwitchShade event
+			SwitchShade();
+		}
+		//if there are subscribers
+		if (TrackMouseEvent != null)
+		{
+			//track the cursor of the mouse
+			TrackMouseEvent(Input.mousePosition.x, Input.mousePosition.y);
 		}
 	}
 }

@@ -7,6 +7,7 @@ public class Hero : MonoBehaviour {
 	[System.Serializable]
 	public class Stats
 	{
+		public int lives;
 		public int currentHealth;
 		public int maxHealth;
 		public int attackPower;
@@ -25,11 +26,14 @@ public class Hero : MonoBehaviour {
 	[SerializeField] protected Rigidbody2D rb;
 	[SerializeField] protected EdgeCollider2D col;
 	[SerializeField] protected BoxCollider2D trig;
-	[SerializeField] protected LayerMask groundLayers;
-	[SerializeField] protected LayerMask attackLayers;
 	[SerializeField] protected Image shieldBar;
+	[SerializeField] protected Colour colour;
+	[SerializeField] protected Color[] color;
+	[SerializeField] SpriteRenderer sprite;
+
 	[SerializeField] protected bool depleteOnHit;
 	[SerializeField] protected bool rangedAttack;
+	public bool isFollowTarget;
 	private bool grounded;
 	private bool startShieldTimer;
 	private bool canBlock;
@@ -37,34 +41,31 @@ public class Hero : MonoBehaviour {
 	private bool canAttack;
 	protected bool isAttacking;
 	private bool rechargeShield;
+	protected bool facingRight;
 	private float timer;
 	private Coroutine transparencyCor;
 	[SerializeField] GameObject projectile;
 	protected GameObject tmpProjectile;
-
+	private int colourIndex;
 	// Use this for initialization
 	protected virtual void Start () 
 	{
-		//register jump event
+		//register events
 		InputManager.Instance.Jump += Jump;
-		//register run event
 		InputManager.Instance.Run += Run;
-		//register attack event
 		InputManager.Instance.Attack += Attack;
-		//register Block event
 		InputManager.Instance.Block += Block;
-		//register UnBlock Event
 		InputManager.Instance.UnBlock += UnBlock;
+		InputManager.Instance.SwitchColour += SwitchColour;
+		InputManager.Instance.SwitchShade += SwitchShade;
+
 		//get the rigidbody of the gameobject
 		rb = gameObject.GetComponent<Rigidbody2D>();
 		//get the edge collider of the gameobject
 		col = gameObject.GetComponent<EdgeCollider2D>();
 		//get the box trigger of the gameObject
 		trig = gameObject.GetComponent<BoxCollider2D>();
-		//ignore all layers but the ground layer
-		groundLayers = 1 << LayerMask.NameToLayer("Ground");
-		//ignore al layers but attack layer
-		attackLayers = 1 << LayerMask.NameToLayer("Attackable");
+		sprite = gameObject.GetComponent<SpriteRenderer>();
 		//ensure the player starts with max health
 		stats.currentHealth = stats.maxHealth;
 		//ensure the players shield is at max capacity
@@ -75,23 +76,26 @@ public class Hero : MonoBehaviour {
 		canBlock = true;
 		//the player can attack when they start
 		canAttack = true;
+		//the player beigins facing right
+		facingRight = true;
 		//ensure the players shieldbar is not showing
 		shieldBar.canvasRenderer.SetAlpha(0.01f);
 		//null the co-routine
 		transparencyCor = null;
+
+		//sprite.color = colour.colorDict.TryGetValue(Colour.ColourType.Purple, out color[0]);
+
 	}
 	protected virtual void OnDestroy () 
 	{
-		//unregister jump event
+		//unregister events
 		InputManager.Instance.Jump -= Jump;
-		//unregister run event
 		InputManager.Instance.Run -= Run;
-		//unregister attack event
 		InputManager.Instance.Attack -= Attack;
-		//unregister block event
 		InputManager.Instance.Block -= Block;
-		//unregister unBlock event
 		InputManager.Instance.UnBlock -= UnBlock;
+		InputManager.Instance.SwitchColour -= SwitchColour;
+		InputManager.Instance.SwitchShade -= SwitchShade;
 	}
 
 	
@@ -180,7 +184,7 @@ public class Hero : MonoBehaviour {
 		if (!isBlocking)
 		{
 			//if the player is on the ground layer then apply a force in the y direction
-			if (GroundCheck())
+			if (HelperFunctions.GroundCheck(col))
 				rb.AddForce(stats.jumpForce);
 
 			if (rb.velocity.y > stats.maxVelocity.y)
@@ -196,7 +200,7 @@ public class Hero : MonoBehaviour {
 			if (horizontalAxis > 0)
 			{
 				rb.AddForce(stats.movementForce);
-
+				facingRight = true;
 				//limit player velocity in right direction
 				if (rb.velocity.x > stats.maxVelocity.x)
 					rb.velocity = new Vector2(stats.maxVelocity.x, rb.velocity.y);
@@ -204,12 +208,13 @@ public class Hero : MonoBehaviour {
 			if (horizontalAxis < 0)
 			{
 				rb.AddForce(-stats.movementForce);
-
+				facingRight = false;
 				//limit players velocity in left direction
 				if (rb.velocity.x < -stats.maxVelocity.x) 
 					rb.velocity = new Vector2(-stats.maxVelocity.x, rb.velocity.y);
 			}
 		}
+		HelperFunctions.FlipScaleX(gameObject, facingRight);
 	}
 	protected virtual void Attack()
 	{
@@ -218,12 +223,31 @@ public class Hero : MonoBehaviour {
 		{
 			if (rangedAttack)
 			{
-				tmpProjectile = Instantiate(projectile, new Vector3(transform.position.x + col.bounds.extents.x, transform.position.y, transform.position.z), Quaternion.identity) as GameObject;
-				Debug.Log("Ranged Attack!");
+				if (facingRight)
+				{
+					if (stats.attackSpeed < 0)
+						stats.attackSpeed = -stats.attackSpeed;
+					else
+						stats.attackSpeed = stats.attackSpeed;
+					
+					tmpProjectile = Instantiate(projectile, new Vector3(transform.position.x + col.bounds.extents.x + projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z), Quaternion.identity) as GameObject;
+				}
+				else
+				{
+					if (stats.attackSpeed > 0)
+						stats.attackSpeed = -stats.attackSpeed;
+					else
+						stats.attackSpeed = stats.attackSpeed;
+					
+					tmpProjectile = Instantiate(projectile, new Vector3(transform.position.x - col.bounds.extents.x - projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z), Quaternion.identity) as GameObject;
+
+					HelperFunctions.FlipScaleX(tmpProjectile, facingRight);
+				}
+					
 			}
 			else
 			{
-				RaycastHit2D hit = Physics2D.Raycast(transform.position + trig.bounds.extents, Vector2.right, stats.attackRange, attackLayers);
+				RaycastHit2D hit = Physics2D.Raycast(transform.position + trig.bounds.extents, Vector2.right, stats.attackRange, HelperFunctions.collidableLayers);
 
 				if (hit.collider != null)
 					Debug.Log("Attacking!");
@@ -281,22 +305,43 @@ public class Hero : MonoBehaviour {
 			transparencyCor = StartCoroutine(HelperFunctions.TransitionTransparency(shieldBar, 0.1f));
 		}
 	}
-	private bool GroundCheck()
+	private void Death()
 	{
-		return Physics2D.OverlapCircle(col.bounds.center, 0.1f, groundLayers);
+		stats.lives--;
+
+		//if a hero has no lives and there are more than one hero
+		if (stats.lives == 0 && LevelManager.Instance.heroes.Count > 1)
+		{
+			//change the camera target
+			UpdateCameraTarget();
+		}
 	}
+	private void UpdateCameraTarget()
+	{
+		if (gameObject.tag == "Player")
+			isFollowTarget = true;	
+	}
+
 	protected virtual void OnCollisionStay2D(Collision2D other)
 	{
-		if (((1 << other.gameObject.layer) & groundLayers) != 0)
+		if (((1 << other.gameObject.layer) & HelperFunctions.collidableLayers) != 0)
 		{
 			grounded = true;
 		}
 	}
 	protected virtual void OnCollisionExit2D(Collision2D other)
 	{
-		if (((1 << other.gameObject.layer) & groundLayers) != 0)
+		if (((1 << other.gameObject.layer) & HelperFunctions.collidableLayers) != 0)
 		{
 			grounded = false;
 		}
+	}
+	private void SwitchColour()
+	{
+		
+	}
+	private void SwitchShade()
+	{
+		
 	}
 }
