@@ -11,12 +11,11 @@ public class Hero : MonoBehaviour {
 		public int currentHealth;
 		public int maxHealth;
 		public int attackPower;
-		public int defence;
-		public float currentShieldStrength;
-		public float shieldCapacity;
 		public float attackRange;
 		public float attackSpeed;
 		public float attackCooldownRate;
+		public float currentShieldStrength;
+		public float shieldCapacity;
 		public Vector2 maxVelocity;
 		public Vector2 jumpForce;
 		public Vector2 movementForce;
@@ -24,16 +23,15 @@ public class Hero : MonoBehaviour {
 
 	[SerializeField] protected Stats stats;
 	[SerializeField] protected Rigidbody2D rb;
-	[SerializeField] protected EdgeCollider2D col;
-	[SerializeField] protected BoxCollider2D trig;
+	[SerializeField] protected EdgeCollider2D edgeCol;
+	[SerializeField] protected BoxCollider2D boxCol;
 	[SerializeField] protected Image shieldBar;
-	[SerializeField] protected Colour colour;
-	[SerializeField] SpriteRenderer sprite;
-
+	[SerializeField] protected ColourManager colour;
+	[SerializeField] protected SpriteRenderer sprite;
+	[SerializeField] protected GameObject projectile;
+	[SerializeField] protected GameObject tmpProjectile;
 	[SerializeField] protected bool depleteOnHit;
 	[SerializeField] protected bool rangedAttack;
-	public bool isFollowTarget;
-	private bool grounded;
 	private bool startShieldTimer;
 	private bool canBlock;
 	private bool isBlocking;
@@ -41,11 +39,10 @@ public class Hero : MonoBehaviour {
 	protected bool isAttacking;
 	private bool rechargeShield;
 	protected bool facingRight;
+	public bool isFollowTarget;
+	private bool grounded;
 	private float timer;
 	private Coroutine transparencyCor;
-	[SerializeField] GameObject projectile;
-	protected GameObject tmpProjectile;
-	private bool switchColor;
 	// Use this for initialization
 	protected virtual void Start () 
 	{
@@ -61,9 +58,9 @@ public class Hero : MonoBehaviour {
 		//get the rigidbody of the gameobject
 		rb = gameObject.GetComponent<Rigidbody2D>();
 		//get the edge collider of the gameobject
-		col = gameObject.GetComponent<EdgeCollider2D>();
+		edgeCol = gameObject.GetComponent<EdgeCollider2D>();
 		//get the box trigger of the gameObject
-		trig = gameObject.GetComponent<BoxCollider2D>();
+		boxCol = gameObject.GetComponent<BoxCollider2D>();
 		sprite = gameObject.GetComponent<SpriteRenderer>();
 		//ensure the player starts with max health
 		stats.currentHealth = stats.maxHealth;
@@ -81,9 +78,8 @@ public class Hero : MonoBehaviour {
 		shieldBar.canvasRenderer.SetAlpha(0.01f);
 		//null the co-routine
 		transparencyCor = null;
-
+		//set the color of the sprite to the current color of the colorManager
 		sprite.color = colour.GetCurrentColor();
-
 	}
 	protected virtual void OnDestroy () 
 	{
@@ -183,7 +179,7 @@ public class Hero : MonoBehaviour {
 		if (!isBlocking)
 		{
 			//if the player is on the ground layer then apply a force in the y direction
-			if (HelperFunctions.GroundCheck(col))
+			if (HelperFunctions.GroundCheck(edgeCol))
 				rb.AddForce(stats.jumpForce);
 
 			if (rb.velocity.y > stats.maxVelocity.y)
@@ -229,7 +225,7 @@ public class Hero : MonoBehaviour {
 					else
 						stats.attackSpeed = stats.attackSpeed;
 					
-					tmpProjectile = Instantiate(projectile, new Vector3(transform.position.x + col.bounds.extents.x + projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z), Quaternion.identity) as GameObject;
+					tmpProjectile = Instantiate(projectile, new Vector3(transform.position.x + edgeCol.bounds.extents.x + projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z), Quaternion.identity) as GameObject;
 				}
 				else
 				{
@@ -238,7 +234,7 @@ public class Hero : MonoBehaviour {
 					else
 						stats.attackSpeed = stats.attackSpeed;
 					
-					tmpProjectile = Instantiate(projectile, new Vector3(transform.position.x - col.bounds.extents.x - projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z), Quaternion.identity) as GameObject;
+					tmpProjectile = Instantiate(projectile, new Vector3(transform.position.x - edgeCol.bounds.extents.x - projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z), Quaternion.identity) as GameObject;
 
 					HelperFunctions.FlipScaleX(tmpProjectile, facingRight);
 				}
@@ -246,7 +242,7 @@ public class Hero : MonoBehaviour {
 			}
 			else
 			{
-				RaycastHit2D hit = Physics2D.Raycast(transform.position + trig.bounds.extents, Vector2.right, stats.attackRange, HelperFunctions.collidableLayers);
+				RaycastHit2D hit = Physics2D.Raycast(transform.position + boxCol.bounds.extents, Vector2.right, stats.attackRange, HelperFunctions.collidableLayers);
 
 				if (hit.collider != null)
 					Debug.Log("Attacking!");
