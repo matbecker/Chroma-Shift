@@ -11,38 +11,46 @@ public class Colour : MonoBehaviour {
 
 	//micro class that holds colourType information and all the colours associated with each type
 	[System.Serializable]
-	public class ColorContainer{
+	public class ColorContainer
+	{
 		public ColourType type;
 		public Color[] colors;
 	}
-
-
 	//Container that has all the colors in it
 	public ColorContainer[] colors;
-	//a dictionary that will have each colour type and each shade of each type
-	public Dictionary<ColourType, Color[]> colorDict;
-
+	//index for the current shade
+	private int shadeIndex;
 	// Use this for initialization
 	void Start () 
 	{
-		LoadColours();
-	}
-	public ColourType NextColour()
-	{
-		return currentColourType++;
-	}
-	// Update is called once per frame
-	void Update () 
-	{
-
-	
 	}
 
-	private void LoadColours()
+	public void NextColour()
 	{
-		colorDict = new Dictionary<ColourType, Color[]>();
+		int a = (int)currentColourType;
+		//shift to the next color in the enum
+		int b = (int)++currentColourType;
+		//if we are at the end of the enum reset the values
+		if(b >= colors.Length)
+			b = 0;
+		
+		currentColourType = (ColourType)b;
+	}
 
-		foreach(var container in colors)
-			colorDict.Add(container.type, container.colors);
+	public void NextShade()
+	{
+		//increase the shade index
+		shadeIndex++;
+	}
+
+	public Color GetCurrentColor()
+	{
+		var a = (int)currentColourType;
+		var b = shadeIndex % colors[a].colors.Length;
+		//c = the current shade of the current color 
+		var c = colors[a].colors[b];
+		//always ensure the alpha is full
+		c.a = 1;
+		return c;
 	}
 }

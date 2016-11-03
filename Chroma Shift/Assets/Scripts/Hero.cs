@@ -28,7 +28,6 @@ public class Hero : MonoBehaviour {
 	[SerializeField] protected BoxCollider2D trig;
 	[SerializeField] protected Image shieldBar;
 	[SerializeField] protected Colour colour;
-	[SerializeField] protected Color[] color;
 	[SerializeField] SpriteRenderer sprite;
 
 	[SerializeField] protected bool depleteOnHit;
@@ -46,7 +45,7 @@ public class Hero : MonoBehaviour {
 	private Coroutine transparencyCor;
 	[SerializeField] GameObject projectile;
 	protected GameObject tmpProjectile;
-	private int colourIndex;
+	private bool switchColor;
 	// Use this for initialization
 	protected virtual void Start () 
 	{
@@ -83,7 +82,7 @@ public class Hero : MonoBehaviour {
 		//null the co-routine
 		transparencyCor = null;
 
-		//sprite.color = colour.colorDict.TryGetValue(Colour.ColourType.Purple, out color[0]);
+		sprite.color = colour.GetCurrentColor();
 
 	}
 	protected virtual void OnDestroy () 
@@ -338,10 +337,12 @@ public class Hero : MonoBehaviour {
 	}
 	private void SwitchColour()
 	{
-		
+		colour.NextColour();
+		sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
 	}
 	private void SwitchShade()
 	{
-		
+		colour.NextShade();
+		sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
 	}
 }
