@@ -7,6 +7,7 @@ public class Hero : MonoBehaviour {
 	[System.Serializable]
 	public class Stats
 	{
+		public int lives;
 		public int currentHealth;
 		public int maxHealth;
 		public int attackPower;
@@ -15,6 +16,7 @@ public class Hero : MonoBehaviour {
 		public float shieldCapacity;
 		public float attackRange;
 		public float attackSpeed;
+		public float attackCooldownRate;
 		public Vector2 maxVelocity;
 		public Vector2 jumpForce;
 		public Vector2 movementForce;
@@ -24,41 +26,45 @@ public class Hero : MonoBehaviour {
 	[SerializeField] protected Rigidbody2D rb;
 	[SerializeField] protected EdgeCollider2D col;
 	[SerializeField] protected BoxCollider2D trig;
-	[SerializeField] protected LayerMask groundLayers;
-	[SerializeField] protected LayerMask attackLayers;
 	[SerializeField] protected Image shieldBar;
-	[SerializeField] protected bool grounded;
-	[SerializeField] protected bool startShieldTimer;
-	[SerializeField] protected bool canBlock;
-	[SerializeField] protected bool isBlocking;
-	[SerializeField] protected bool rechargeShield;
+	[SerializeField] protected Colour colour;
+	[SerializeField] SpriteRenderer sprite;
+
 	[SerializeField] protected bool depleteOnHit;
 	[SerializeField] protected bool rangedAttack;
-
+	public bool isFollowTarget;
+	private bool grounded;
+	private bool startShieldTimer;
+	private bool canBlock;
+	private bool isBlocking;
+	private bool canAttack;
+	protected bool isAttacking;
+	private bool rechargeShield;
+	protected bool facingRight;
+	private float timer;
 	private Coroutine transparencyCor;
-
+	[SerializeField] GameObject projectile;
+	protected GameObject tmpProjectile;
+	private bool switchColor;
 	// Use this for initialization
 	protected virtual void Start () 
 	{
-		//register jump event
+		//register events
 		InputManager.Instance.Jump += Jump;
-		//register run event
 		InputManager.Instance.Run += Run;
-		//register attack event
 		InputManager.Instance.Attack += Attack;
-		//register Block event
 		InputManager.Instance.Block += Block;
 		InputManager.Instance.UnBlock += UnBlock;
+		InputManager.Instance.SwitchColour += SwitchColour;
+		InputManager.Instance.SwitchShade += SwitchShade;
+
 		//get the rigidbody of the gameobject
 		rb = gameObject.GetComponent<Rigidbody2D>();
 		//get the edge collider of the gameobject
 		col = gameObject.GetComponent<EdgeCollider2D>();
 		//get the box trigger of the gameObject
 		trig = gameObject.GetComponent<BoxCollider2D>();
-		//ignore all layers but the ground layer
-		groundLayers = 1 << LayerMask.NameToLayer("Ground");
-		//ignore al layers but attack layer
-		attackLayers = 1 << LayerMask.NameToLayer("Attackable");
+		sprite = gameObject.GetComponent<SpriteRenderer>();
 		//ensure the player starts with max health
 		stats.currentHealth = stats.maxHealth;
 		//ensure the players shield is at max capacity
@@ -67,31 +73,48 @@ public class Hero : MonoBehaviour {
 		shieldBar = gameObject.GetComponentInChildren<Image>();
 		//the player can block when they start
 		canBlock = true;
+		//the player can attack when they start
+		canAttack = true;
+		//the player beigins facing right
+		facingRight = true;
 		//ensure the players shieldbar is not showing
 		shieldBar.canvasRenderer.SetAlpha(0.01f);
-
+		//null the co-routine
 		transparencyCor = null;
+
+		sprite.color = colour.GetCurrentColor();
+
 	}
 	protected virtual void OnDestroy () 
 	{
-		//unregister jump event
+		//unregister events
 		InputManager.Instance.Jump -= Jump;
-		//unregister run event
 		InputManager.Instance.Run -= Run;
-		//unregister attack event
 		InputManager.Instance.Attack -= Attack;
-		//unregister Block event
 		InputManager.Instance.Block -= Block;
 		InputManager.Instance.UnBlock -= UnBlock;
+		InputManager.Instance.SwitchColour -= SwitchColour;
+		InputManager.Instance.SwitchShade -= SwitchShade;
 	}
 
 	
 	// Update is called once per frame
 	protected virtual void Update () 
 	{
-		if (Input.GetKeyDown("t"))
+		//if the player has attacked
+		if (isAttacking)
 		{
-			stats.currentShieldStrength -= 0.5f;
+			//start a timer
+			timer += Time.deltaTime;
+
+			//if the timer is greater than the attack cooldown rate
+			if (timer >= stats.attackCooldownRate)
+			{
+				//reset the timer
+				timer = 0.0f;
+				//player can attack again
+				isAttacking = false;
+			}
 		}
 		//if the heros shield doesnt depletes when it is hit
 		if (!depleteOnHit)
@@ -99,7 +122,7 @@ public class Hero : MonoBehaviour {
 			//start the shield timer
 			if (startShieldTimer)
 			{
-				//shield depletes based over time
+				//shield depletes over time once the hero starts blocking
 				stats.currentShieldStrength -= Time.deltaTime;
 			}
 		}
@@ -116,7 +139,7 @@ public class Hero : MonoBehaviour {
 			}
 				
 		}
-		//if there shield is empty
+		//if their shield is empty
 		if (stats.currentShieldStrength <= 0.0f)
 		{
 			//their shield is broken and they can not use it 
@@ -136,7 +159,7 @@ public class Hero : MonoBehaviour {
 	}
 	private void CheckShieldFull()
 	{
-		//if the players shield s full 
+		//if the players shield is full 
 		if (stats.currentShieldStrength >= stats.shieldCapacity)
 		{
 			//check to see if the coroutine is still running
@@ -154,52 +177,88 @@ public class Hero : MonoBehaviour {
 			canBlock = true;
 		}
 	}
-	protected virtual void Jump()
+	private void Jump()
 	{
-		//if the player is on the ground layer then apply a force in the y direction
-		if (GroundCheck())
-			rb.AddForce(stats.jumpForce);
+		//if the player is not blocking
+		if (!isBlocking)
+		{
+			//if the player is on the ground layer then apply a force in the y direction
+			if (HelperFunctions.GroundCheck(col))
+				rb.AddForce(stats.jumpForce);
 
-		if (rb.velocity.y > stats.maxVelocity.y)
-			rb.velocity = new Vector2(rb.velocity.x, stats.maxVelocity.y);
+			if (rb.velocity.y > stats.maxVelocity.y)
+				rb.velocity = new Vector2(rb.velocity.x, stats.maxVelocity.y);
+		}
+
 	}
-	protected virtual void Run(float horizontalAxis)
+	private void Run(float horizontalAxis)
 	{
-		if (horizontalAxis > 0)
+		//if the player is not blocking
+		if (!isBlocking)
 		{
-			rb.AddForce(stats.movementForce);
-
-			//limit player velocity in right direction
-			if (rb.velocity.x > stats.maxVelocity.x)
-				rb.velocity = new Vector2(stats.maxVelocity.x, rb.velocity.y);
+			if (horizontalAxis > 0)
+			{
+				rb.AddForce(stats.movementForce);
+				facingRight = true;
+				//limit player velocity in right direction
+				if (rb.velocity.x > stats.maxVelocity.x)
+					rb.velocity = new Vector2(stats.maxVelocity.x, rb.velocity.y);
+			}
+			if (horizontalAxis < 0)
+			{
+				rb.AddForce(-stats.movementForce);
+				facingRight = false;
+				//limit players velocity in left direction
+				if (rb.velocity.x < -stats.maxVelocity.x) 
+					rb.velocity = new Vector2(-stats.maxVelocity.x, rb.velocity.y);
+			}
 		}
-		if (horizontalAxis < 0)
-		{
-			rb.AddForce(-stats.movementForce);
-
-			//limit players velocity in left direction
-			if (rb.velocity.x < -stats.maxVelocity.x) 
-				rb.velocity = new Vector2(-stats.maxVelocity.x, rb.velocity.y);
-		}
+		HelperFunctions.FlipScaleX(gameObject, facingRight);
 	}
 	protected virtual void Attack()
 	{
-		if (rangedAttack)
+		//if the player is not blocking they can attack and they havent already attacked
+		if (!isBlocking && canAttack && !isAttacking)
 		{
-			Debug.Log("Ranged Attack!");
-		}
-		else
-		{
-			RaycastHit2D hit = Physics2D.Raycast(transform.position + trig.bounds.extents, Vector2.right, stats.attackRange, attackLayers);
+			if (rangedAttack)
+			{
+				if (facingRight)
+				{
+					if (stats.attackSpeed < 0)
+						stats.attackSpeed = -stats.attackSpeed;
+					else
+						stats.attackSpeed = stats.attackSpeed;
+					
+					tmpProjectile = Instantiate(projectile, new Vector3(transform.position.x + col.bounds.extents.x + projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z), Quaternion.identity) as GameObject;
+				}
+				else
+				{
+					if (stats.attackSpeed > 0)
+						stats.attackSpeed = -stats.attackSpeed;
+					else
+						stats.attackSpeed = stats.attackSpeed;
+					
+					tmpProjectile = Instantiate(projectile, new Vector3(transform.position.x - col.bounds.extents.x - projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z), Quaternion.identity) as GameObject;
 
-			if (hit.collider != null)
-				Debug.Log("Attacking!");
-		}
+					HelperFunctions.FlipScaleX(tmpProjectile, facingRight);
+				}
+					
+			}
+			else
+			{
+				RaycastHit2D hit = Physics2D.Raycast(transform.position + trig.bounds.extents, Vector2.right, stats.attackRange, HelperFunctions.collidableLayers);
 
+				if (hit.collider != null)
+					Debug.Log("Attacking!");
+			}
+			//the hero has attacked and will not be able to again until their cooldown is satisfied
+			isAttacking = true;
+		}
 	}
 	protected virtual void Block()
 	{
-		if (canBlock)
+		//if the player is not attacking and they can block
+		if (!isAttacking && canBlock)
 		{
 			//display their shield bar
 			shieldBar.CrossFadeAlpha(1f, 0.4f, false);
@@ -214,6 +273,8 @@ public class Hero : MonoBehaviour {
 				//player has pushed the block button is temporarily invinsible
 				startShieldTimer = true;
 			}
+			//hero can not attack if they are blocking
+			canAttack = false;
 		}
 	}
 	protected virtual void UnBlock()
@@ -226,9 +287,10 @@ public class Hero : MonoBehaviour {
 			//they are no longer blocking because they let go of the block keypress
 			isBlocking = false;
 		}
-
+		//The hero can attack once they are no longer blocking 
+		canAttack = true;
 	}
-	protected virtual void ShieldDepleted()
+	private void ShieldDepleted()
 	{
 		// this will get increased in update because canBlock is false
 		stats.currentShieldStrength = 0.0f;
@@ -242,23 +304,45 @@ public class Hero : MonoBehaviour {
 			transparencyCor = StartCoroutine(HelperFunctions.TransitionTransparency(shieldBar, 0.1f));
 		}
 	}
-	protected virtual bool GroundCheck()
+	private void Death()
 	{
-		return Physics2D.OverlapCircle(col.bounds.center, 0.1f, groundLayers);
+		stats.lives--;
+
+		//if a hero has no lives and there are more than one hero
+		if (stats.lives == 0 && LevelManager.Instance.heroes.Count > 1)
+		{
+			//change the camera target
+			UpdateCameraTarget();
+		}
 	}
+	private void UpdateCameraTarget()
+	{
+		if (gameObject.tag == "Player")
+			isFollowTarget = true;	
+	}
+
 	protected virtual void OnCollisionStay2D(Collision2D other)
 	{
-		if (((1 << other.gameObject.layer) & groundLayers) != 0)
+		if (((1 << other.gameObject.layer) & HelperFunctions.collidableLayers) != 0)
 		{
 			grounded = true;
 		}
 	}
 	protected virtual void OnCollisionExit2D(Collision2D other)
 	{
-		if (((1 << other.gameObject.layer) & groundLayers) != 0)
+		if (((1 << other.gameObject.layer) & HelperFunctions.collidableLayers) != 0)
 		{
 			grounded = false;
 		}
 	}
-
+	private void SwitchColour()
+	{
+		colour.NextColour();
+		sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
+	}
+	private void SwitchShade()
+	{
+		colour.NextShade();
+		sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
+	}
 }

@@ -6,7 +6,7 @@ public class Ninja : Hero {
 	[SerializeField] private bool canDoubleJump;
 	// Use this for initialization
 	protected override void Start ()
-	{
+	{	
 		InputManager.Instance.DoubleJump += DoubleJump;
 		base.Start ();
 	}
@@ -21,14 +21,6 @@ public class Ninja : Hero {
 	{
 		base.Update ();
 	}
-	protected override void Jump()
-	{
-		base.Jump ();
-	}
-	protected override void Run (float horizontalAxis)
-	{
-		base.Run (horizontalAxis);
-	}
 	protected override void Attack ()
 	{
 		base.Attack ();
@@ -36,10 +28,8 @@ public class Ninja : Hero {
 	protected override void Block ()
 	{
 		base.Block ();
-	}
-	protected override bool GroundCheck ()
-	{
-		return base.GroundCheck ();
+		//ninja cannot see his shield timer
+		shieldBar.enabled = false;
 	}
 	protected override void OnCollisionExit2D (Collision2D other)
 	{
