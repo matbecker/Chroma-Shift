@@ -3,7 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-public class Colour : MonoBehaviour {
+public class ColourManager : MonoBehaviour {
 
 	//enum for each different colour type
 	public enum ColourType { Purple, Blue, Green, Yellow, Orange, Red };
