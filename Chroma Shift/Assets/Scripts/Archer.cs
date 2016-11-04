@@ -4,14 +4,13 @@ using System.Collections.Generic;
 
 public class Archer : Hero {
 
-	[SerializeField] float shotAngle;
 	[SerializeField] GameObject bow;
 	[SerializeField] GameObject shield;
 
 	protected override void Start ()
 	{
 		base.Start ();
-		InputManager.instance.TrackMouseEvent += TrackMouseEvent;
+		InputManager.Instance.TrackMouseEvent += TrackMouseEvent;
 	}
 	protected override void OnDestroy ()
 	{

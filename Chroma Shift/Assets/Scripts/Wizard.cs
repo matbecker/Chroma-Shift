@@ -47,6 +47,7 @@ public class Wizard : Hero {
 	protected override void Block ()
 	{
 		base.Block ();
+		isInvinsible = true;
 	}
 	protected override void OnCollisionStay2D (Collision2D other)
 	{

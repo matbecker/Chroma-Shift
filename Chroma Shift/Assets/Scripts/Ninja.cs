@@ -4,6 +4,8 @@ using System.Collections;
 public class Ninja : Hero {
 
 	[SerializeField] private bool canDoubleJump;
+	[SerializeField] GameObject dagger;
+	[SerializeField] SpriteRenderer headband;
 	// Use this for initialization
 	protected override void Start ()
 	{	
@@ -20,6 +22,19 @@ public class Ninja : Hero {
 	protected override void Update ()
 	{
 		base.Update ();
+
+		if (isInvinsible)
+		{
+			sprite.enabled = false;
+			dagger.SetActive(false);
+			headband.enabled = false;
+		}
+		else
+		{
+			sprite.enabled = true;
+			dagger.SetActive(true);
+			headband.enabled = true;
+		}
 	}
 	protected override void Attack ()
 	{
