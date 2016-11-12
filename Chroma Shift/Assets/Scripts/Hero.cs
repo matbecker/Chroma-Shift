@@ -34,8 +34,8 @@ public class Hero : MonoBehaviour {
 	[SerializeField] protected bool depleteOnHit;
 	[SerializeField] protected bool rangedAttack;
 	private bool grounded;
-	private bool startShieldTimer;
-	private bool canBlock;
+	protected bool startShieldTimer;
+	protected bool canBlock;
 	private bool isBlocking;
 	private bool canAttack;
 	protected bool isAttacking;
@@ -364,11 +364,13 @@ public class Hero : MonoBehaviour {
 	private void SwitchColour()
 	{
 		colour.NextColour();
-		sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
+		//sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
+		sprite.color = colour.GetCurrentColor();
 	}
 	private void SwitchShade()
 	{
 		colour.NextShade();
-		sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
+		//sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
+		sprite.color = colour.GetCurrentColor();
 	}
 }

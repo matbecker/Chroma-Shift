@@ -34,8 +34,9 @@ public class InputManager : MonoBehaviour {
 	public event KeyDownEvent Block;
 	public event KeyDownEvent SwitchColour;
 	public event KeyDownEvent SwitchShade;
-	public event KeyUpEvent UnBlock;
 	public event KeyDownEvent Pause;
+	public event KeyUpEvent UnBlock;
+	public event KeyUpEvent UnAttack;
 	public event AxisEvent Run;
 	public event MouseEvent TrackMouseEvent;
 
@@ -64,6 +65,12 @@ public class InputManager : MonoBehaviour {
 		{
 			//Call the Attack event
 			Attack();
+		}
+		//if the attack button is pushed and there are subscribers
+		if (Input.GetButtonUp("Attack") && UnAttack != null)
+		{
+			//Call the UnAttack event
+			UnAttack();
 		}
 		//if there are any Run Subscribers
 		if (Run != null)

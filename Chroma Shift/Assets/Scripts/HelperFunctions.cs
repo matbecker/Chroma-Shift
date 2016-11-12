@@ -16,6 +16,7 @@ public static class HelperFunctions {
 			yield return new WaitForSeconds(duration);
 		}
 	}
+
 	public static Vector3 ArcTowards(Transform start, Transform end, float angle)
 	{
 		var direction = end.position - start.position;
@@ -29,6 +30,7 @@ public static class HelperFunctions {
 
 		return velocity * direction.normalized;
 	}
+
 	public static Vector2 Arc(Transform projectileLauncher, bool facingRight)
 	{
 		Vector2 val; 
@@ -40,10 +42,27 @@ public static class HelperFunctions {
 
 		return val;
 	}
+
 	public static bool GroundCheck(EdgeCollider2D col)
 	{
 		return Physics2D.OverlapCircle(col.bounds.center, 0.1f, collidableLayers);
 	}
+
+	public static Color ColorLerp(Color currentColor, Color desiredColor, float duration)
+	{
+		float startTime = Time.time;
+		float endTime = startTime + duration;
+
+		while (Time.time < endTime)
+		{
+			float elapsedTime = Time.time - startTime;
+			float percentComplete = elapsedTime / (endTime - startTime);
+
+			return Color.Lerp(currentColor, desiredColor, percentComplete);
+		}
+		return currentColor;
+	}
+
 	public static void FlipScaleX(GameObject obj, bool facingRight)
 	{
 		if (facingRight)
