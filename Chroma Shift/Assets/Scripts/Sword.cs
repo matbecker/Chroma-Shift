@@ -7,11 +7,13 @@ public class Sword : MonoBehaviour {
 	[SerializeField] BoxCollider2D aoeTrigger;
 	private float shakeTimer;
 
+
 	void Start()
 	{
+		cam = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<CameraBehaviour>();
 		aoeTrigger.enabled = false;
 	}
-	// Update is called once per frame
+		
 	void Update () 
 	{
 		if (shakeTimer > 0.0f)
@@ -25,12 +27,14 @@ public class Sword : MonoBehaviour {
 		else
 			shakeTimer = 0.0f;
 	}
+
 	public void StartAreaOfEffect()
 	{
 		//start the shaking effect
 		shakeTimer = 0.2f;
 		aoeTrigger.enabled = true;
 	}
+
 	public void StopAreaOfEffect()
 	{
 		aoeTrigger.enabled = false;

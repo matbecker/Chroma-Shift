@@ -31,14 +31,11 @@ public static class HelperFunctions {
 		return velocity * direction.normalized;
 	}
 
-	public static Vector2 Arc(Transform projectileLauncher, bool facingRight)
+	public static Vector2 Arc(Transform projectileLauncher)
 	{
 		Vector2 val; 
 
-		if (facingRight)
-			val = new Vector2(Mathf.Cos(projectileLauncher.localRotation.z * 2), Mathf.Sin(projectileLauncher.localRotation.z * 2));
-		else
-			val = new Vector2(Mathf.Cos(-projectileLauncher.localRotation.z * 2), Mathf.Sin(-projectileLauncher.localRotation.z * 2));
+		val = new Vector2(Mathf.Cos(projectileLauncher.localRotation.z * 2), Mathf.Sin(projectileLauncher.localRotation.z * 2));
 
 		return val;
 	}

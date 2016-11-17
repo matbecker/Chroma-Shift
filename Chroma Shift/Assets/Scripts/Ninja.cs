@@ -13,21 +13,29 @@ public class Ninja : Hero {
 	private float endLerpTimer;
 	private bool freezeBlock;
 
-	// Use this for initialization
+
 	protected override void Start ()
 	{	
 		base.Start ();
-		InputManager.Instance.DoubleJump += DoubleJump;
+
+		if (photonView.isMine)
+			InputManager.Instance.DoubleJump += DoubleJump;
+		
 		currentColor = colour.GetCurrentColor();
+
+		//ninja cannot see his shield timer
 		shieldBar.enabled = false;
 	}
+
 	protected override void OnDestroy ()
 	{
 		base.OnDestroy ();
-		InputManager.Instance.DoubleJump -= DoubleJump;
+
+		if (photonView.isMine)
+			InputManager.Instance.DoubleJump -= DoubleJump;
 	}
 	
-	// Update is called once per frame
+
 	protected override void Update ()
 	{
 		base.Update ();
@@ -56,14 +64,34 @@ public class Ninja : Hero {
 			endLerpTimer += Time.deltaTime / lerpDuration;
 		}
 	}
+
 	protected override void Attack ()
 	{
 		base.Attack ();
+		disableInput = true;
+
+		PlayAttackAnimation();
+
+		//call the play attack animation over the network
+		if (photonView.isMine)
+			photonView.RPC("PlayAttackAnimation", PhotonTargets.Others);
+
+		RaycastHit2D hit = Physics2D.Raycast(transform.position + boxCol.bounds.extents, Vector2.right, stats.attackRange, HelperFunctions.collidableLayers);
+
+		if (hit.collider != null)
+			Debug.Log("Attacking!");
 	}
-	protected override void Block ()
+	//method for playing the attack animation
+	[PunRPC] private void PlayAttackAnimation()
+	{
+		anim.SetBool("isAttacking", true);
+	}
+
+	[PunRPC] protected override void Block ()
 	{
 		base.Block ();
-		//ninja cannot see his shield timer
+
+		//get the current color the ninjas sprite is before he turns invisible
 		currentColor = colour.GetCurrentColor();
 
 		//dont allow the player to reset the LerpTimer if they are currently blocking

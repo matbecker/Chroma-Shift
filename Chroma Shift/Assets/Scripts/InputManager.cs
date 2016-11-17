@@ -40,9 +40,9 @@ public class InputManager : MonoBehaviour {
 	public event AxisEvent Run;
 	public event MouseEvent TrackMouseEvent;
 
-	// Use this for initialization
-	void Start () 
+	private void Awake()
 	{
+		DontDestroyOnLoad(gameObject);
 	}
 
 	void Update()

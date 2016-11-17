@@ -2,8 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public class LevelManager : MonoBehaviour {
+public class LevelManager : Photon.MonoBehaviour {
 
+	[SerializeField] Vector3 startPoint;
 	private static LevelManager instance;
 	public static LevelManager Instance
 	{
@@ -18,15 +19,36 @@ public class LevelManager : MonoBehaviour {
 
 
 	public float levelCompletionTimer;
-	public List<Hero> heroes;
+
+	private void Awake()
+	{
+		DontDestroyOnLoad(gameObject);
+	}
 
 	// Use this for initialization
 	void Start () 
 	{
-		foreach (Hero hero in heroes)
+		
+		GameObject go;
+
+		if (!PhotonNetwork.offlineMode)
 		{
-			heroes.Add(hero);
+			var hm = HeroManager.Instance;
+			go = PhotonNetwork.Instantiate(HeroManager.Instance.CurrentHeroPrefab.name, startPoint, Quaternion.identity, 0, 
+				new object[]{
+				hm.currentColorType,
+				hm.currentShadeIndex
+			}) as GameObject;
+		} 
+		else
+		{
+			go = Instantiate(HeroManager.Instance.CurrentHeroPrefab, startPoint, Quaternion.identity) as GameObject;
 		}
+		var colour = go.GetComponent<Colour>();
+
+		colour.currentColourType = HeroManager.Instance.currentColorType;
+		colour.shadeIndex = HeroManager.Instance.currentShadeIndex;
+
 	}
 	
 	// Update is called once per frame
@@ -34,4 +56,5 @@ public class LevelManager : MonoBehaviour {
 	{
 		
 	}
+
 }

@@ -20,21 +20,33 @@ public class Wizard : Hero {
 	protected override void Start ()
 	{
 		base.Start ();
-		InputManager.Instance.Hover += Hover;
-		InputManager.Instance.UnAttack += UnAttack;
+
+		if(photonView.isMine)
+		{
+			InputManager.Instance.Hover += Hover;
+			InputManager.Instance.UnAttack += UnAttack;
+		}
+
 		shield.GetComponent<SpriteRenderer>().color = Color.clear;
 		halfTransparency = new Color(1,1,1,0.5f);
 		freezeBlock = false;
 	}
+
 	protected override void OnDestroy ()
 	{
 		base.OnDestroy ();
-		InputManager.Instance.Hover -= Hover;
-		InputManager.Instance.UnAttack -= UnAttack;
+
+		if(photonView.isMine)
+		{
+			InputManager.Instance.Hover -= Hover;
+			InputManager.Instance.UnAttack -= UnAttack;
+		}
 	}
+
 	protected override void Update()
 	{
 		base.Update();
+
 		//if the player is hovering start timing their hover
 		if (isHovering)
 			hoverTimer += Time.deltaTime;
@@ -112,22 +124,62 @@ public class Wizard : Hero {
 		}
 
 	}
+
 	protected override void Attack ()
 	{
 		base.Attack ();
 
-		isChargingShot = true;
+		Vector2 spawnProjectilePoint;
+
+		//if the wizard is facing right spawn a projectile at the right side of their sprite
+		if(facingRight)
+			spawnProjectilePoint = new Vector3(transform.position.x + edgeCol.bounds.extents.x + projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z);
+		//if the player is facing left spawn a projectile at the left side of their sprite
+		else 
+			spawnProjectilePoint = new Vector3(transform.position.x - edgeCol.bounds.extents.x - projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z);
+
+
+		StartChargeShot(spawnProjectilePoint);
+
+		//call teh start charge shot method over the network
+		if(photonView.isMine)
+			photonView.RPC("StartChargeShot", PhotonTargets.Others, spawnProjectilePoint);
+	}
+	//method for spawning the wizards projectile
+	[PunRPC] void StartChargeShot(Vector2 spawnProjectilePoint)
+	{
+		//spawn the projectile
+		tmpProjectile = Instantiate(projectile, spawnProjectilePoint, Quaternion.identity) as GameObject;
 		//Freeze the y position of the projectile so it doesnt fall
 		tmpProjectile.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezePositionY;
-	}
-	private void UnAttack()
-	{
-		//give the projectile a velocity once the attack button is released
-		tmpProjectile.GetComponent<Rigidbody2D>().velocity = new Vector2(stats.attackSpeed, 0.0f);
+		//wizard is now charging their shot
+		isChargingShot = true;
 
+	}
+	//method for shooting the wizards projectile
+	[PunRPC] void ShootChargeShot(Vector2 velocity)
+	{
+		//set the projectiles velocity
+		tmpProjectile.GetComponent<Rigidbody2D>().velocity = velocity;
+		//wizard is no longer charging their shot
 		isChargingShot = false;
 	}
-	protected override void Block ()
+
+	private void UnAttack()
+	{
+		//give the projectile a velocity in the x direction once the attack button is released
+		var velocity = new Vector2(stats.attackSpeed, 0.0f);
+		//negate the velocity if the player is facing left
+		if(!facingRight) 
+			velocity.x *= -1;
+		
+		ShootChargeShot(velocity);
+		//call the shoot charge shot method over the network
+		if(photonView.isMine)
+			photonView.RPC("ShootChargeShot", PhotonTargets.Others, velocity);
+	}
+
+	[PunRPC] protected override void Block ()
 	{
 		base.Block ();
 
@@ -139,28 +191,38 @@ public class Wizard : Hero {
 		}
 		freezeBlock = true;
 	}
+		
 	protected override void OnCollisionStay2D (Collision2D other)
 	{
 		base.OnCollisionStay2D (other);
-		//player is on the ground and is not hovering
-		isHovering = false;
 
-		canHover = false;
+		if(photonView.isMine)
+		{
+			//player is on the ground and is not hovering
+			isHovering = false;
+			canHover = false;
+		}
 	}
+
 	protected override void OnCollisionExit2D (Collision2D other)
 	{
 		base.OnCollisionExit2D (other);
 
-		canHover = true;
+		//player is off the ground and can hover if they wish
+		if(photonView.isMine)
+			canHover = true;
 	}
+
 	private void Hover()
 	{
 		//if the player can hover freeze their y position so they begin hovering
 		if (canHover)
 			rb.constraints = RigidbodyConstraints2D.FreezePositionY;
+		
 		//player is now hovering 
 		isHovering = true;
 	}
+
 	private void StopHovering()
 	{
 		//unfreeze the players position
@@ -168,7 +230,7 @@ public class Wizard : Hero {
 						 ~RigidbodyConstraints2D.FreezePositionX;
 		//player is no longer hovering
 		isHovering = false;
-		//and no cannot hover again
+		//and cannot hover again
 		canHover = false;
 	}
 }
