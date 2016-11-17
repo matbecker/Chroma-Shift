@@ -2,7 +2,7 @@
 using System.Collections;
 using UnityEngine.UI;
 
-public class Hero : MonoBehaviour {
+public class Hero : Photon.MonoBehaviour {
 
 	[System.Serializable]
 	public class Stats
@@ -26,42 +26,61 @@ public class Hero : MonoBehaviour {
 	[SerializeField] protected EdgeCollider2D edgeCol;
 	[SerializeField] protected BoxCollider2D boxCol;
 	[SerializeField] protected Image shieldBar;
-	[SerializeField] protected ColourManager colour;
+	[SerializeField] protected Colour colour;
 	[SerializeField] protected SpriteRenderer sprite;
 	[SerializeField] protected GameObject projectile;
 	[SerializeField] protected GameObject tmpProjectile;
+	[SerializeField] protected Animator anim;
 	[SerializeField] protected bool depleteOnHit;
 	[SerializeField] protected bool rangedAttack;
-	private bool startShieldTimer;
-	private bool canBlock;
+	private bool grounded;
+	protected bool startShieldTimer;
+	protected bool canBlock;
 	private bool isBlocking;
 	private bool canAttack;
-	protected bool isAttacking;
+	public bool isAttacking;
 	private bool rechargeShield;
+	protected bool disableInput;
 	protected bool facingRight;
+	protected bool isInvinsible;
 	public bool isFollowTarget;
-	private bool grounded;
 	private float timer;
 	private Coroutine transparencyCor;
-	// Use this for initialization
+
+	//Online Synchronization variables
+	private float lastSynchronizationTime = 0f;
+	private float syncDelay = 0f;
+	private float syncTime = 0f;
+	private Vector3 syncStartPosition = Vector3.zero;
+	private Vector3 syncEndPosition = Vector3.zero;
+
+
+	protected virtual void Awake()
+	{
+		DontDestroyOnLoad(gameObject);
+
+		if (photonView.isMine)
+			gameObject.tag = "Player";
+	}
 	protected virtual void Start () 
 	{
-		//register events
-		InputManager.Instance.Jump += Jump;
-		InputManager.Instance.Run += Run;
-		InputManager.Instance.Attack += Attack;
-		InputManager.Instance.Block += Block;
-		InputManager.Instance.UnBlock += UnBlock;
-		InputManager.Instance.SwitchColour += SwitchColour;
-		InputManager.Instance.SwitchShade += SwitchShade;
-
+		if(photonView.isMine)
+		{
+			//register events
+			InputManager.Instance.Jump += Jump;
+			InputManager.Instance.Run += Run;
+			InputManager.Instance.Attack += TryAttack;
+			InputManager.Instance.Block += TryBlock;
+			InputManager.Instance.UnBlock += UnBlock;
+			InputManager.Instance.SwitchColour += SwitchColour;
+			InputManager.Instance.SwitchShade += SwitchShade;
+		}
 		//get the rigidbody of the gameobject
 		rb = gameObject.GetComponent<Rigidbody2D>();
 		//get the edge collider of the gameobject
 		edgeCol = gameObject.GetComponent<EdgeCollider2D>();
 		//get the box trigger of the gameObject
 		boxCol = gameObject.GetComponent<BoxCollider2D>();
-		sprite = gameObject.GetComponent<SpriteRenderer>();
 		//ensure the player starts with max health
 		stats.currentHealth = stats.maxHealth;
 		//ensure the players shield is at max capacity
@@ -78,48 +97,121 @@ public class Hero : MonoBehaviour {
 		shieldBar.canvasRenderer.SetAlpha(0.01f);
 		//null the co-routine
 		transparencyCor = null;
-		//set the color of the sprite to the current color of the colorManager
-		sprite.color = colour.GetCurrentColor();
-	}
-	protected virtual void OnDestroy () 
-	{
-		//unregister events
-		InputManager.Instance.Jump -= Jump;
-		InputManager.Instance.Run -= Run;
-		InputManager.Instance.Attack -= Attack;
-		InputManager.Instance.Block -= Block;
-		InputManager.Instance.UnBlock -= UnBlock;
-		InputManager.Instance.SwitchColour -= SwitchColour;
-		InputManager.Instance.SwitchShade -= SwitchShade;
+
+		if(!photonView.isMine) 
+		{
+			//Get the Photon Data
+			var data = photonView.instantiationData;
+			//sync other players colour data with photon
+			colour.currentColourType = (Colour.ColourType)data[0];
+			//sync other players shade data with photon
+			colour.shadeIndex = (int)data[1];
+			//dont worry about the other players gravity
+			rb.gravityScale = 0;
+		}
+
+		SetupSprite();
 	}
 
-	
+	public void SetupSprite()
+	{
+		//Get the sprite renderer component
+		sprite = gameObject.GetComponent<SpriteRenderer>();
+		//set the color to the players colour 
+		sprite.color = colour.GetCurrentColor();
+	}
+
+	protected virtual void OnDestroy () 
+	{
+		if (photonView.isMine)
+		{
+			//unregister events
+			InputManager.Instance.Jump -= Jump;
+			InputManager.Instance.Run -= Run;
+			InputManager.Instance.Attack -= TryAttack;
+			InputManager.Instance.Block -= TryBlock;
+			InputManager.Instance.UnBlock -= UnBlock;
+			InputManager.Instance.SwitchColour -= SwitchColour;
+			InputManager.Instance.SwitchShade -= SwitchShade;
+		}
+	}
+	//method for passing stuff to photon 
+	public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+	{
+		if (stream.isWriting)
+		{
+			//send position
+			stream.SendNext(rb.position);
+			//send velocity
+			stream.SendNext(rb.velocity);
+			//send scale
+			stream.SendNext(transform.localScale.x);
+		}
+		else
+		{
+			var syncPosition = (Vector2)stream.ReceiveNext();
+			var syncVelocity = (Vector2)stream.ReceiveNext();
+			var xScale = (float)stream.ReceiveNext();
+
+			Vector3 scale = transform.localScale;
+			transform.localScale = new Vector3(xScale, scale.y, scale.z);
+			syncTime = 0f;
+			syncDelay = Time.time - lastSynchronizationTime;
+			lastSynchronizationTime = Time.time;
+			syncEndPosition = syncPosition + syncVelocity * syncDelay;
+			syncStartPosition = rb.position;
+		}
+	}
+	private void SyncedMovement()
+	{
+		syncTime += Time.deltaTime;
+		//lerp position towards where the player is headed over the network
+		rb.position = Vector3.Lerp(syncStartPosition, syncEndPosition, syncTime / syncDelay);
+	}
+
 	// Update is called once per frame
 	protected virtual void Update () 
 	{
-		//if the player has attacked
-		if (isAttacking)
+		if(!photonView.isMine)
 		{
-			//start a timer
-			timer += Time.deltaTime;
+			//sync other players movement over the network 
+			SyncedMovement();
+		}
 
-			//if the timer is greater than the attack cooldown rate
-			if (timer >= stats.attackCooldownRate)
+		if(photonView.isMine){
+			//if the player has attacked
+			if (isAttacking)
 			{
-				//reset the timer
-				timer = 0.0f;
-				//player can attack again
-				isAttacking = false;
+				//start a timer
+				timer += Time.deltaTime;
+
+				//if the timer is greater than the attack cooldown rate
+				if (timer >= stats.attackCooldownRate)
+				{
+					//reset the timer
+					timer = 0.0f;
+
+					ResetAttack();
+					//Reset the attack over the network
+					photonView.RPC("ResetAttack", PhotonTargets.Others);
+				}
 			}
 		}
+		
 		//if the heros shield doesnt depletes when it is hit
 		if (!depleteOnHit)
 		{
 			//start the shield timer
 			if (startShieldTimer)
 			{
+				//they are invinsible
+				isInvinsible = true;
 				//shield depletes over time once the hero starts blocking
 				stats.currentShieldStrength -= Time.deltaTime;
+			}
+			else
+			{
+				isInvinsible = false;
 			}
 		}
 		//players shield depletes when it is hit
@@ -133,7 +225,7 @@ public class Hero : MonoBehaviour {
 				//check if their shield is full
 				CheckShieldFull();
 			}
-				
+
 		}
 		//if their shield is empty
 		if (stats.currentShieldStrength <= 0.0f)
@@ -151,7 +243,6 @@ public class Hero : MonoBehaviour {
 		}
 		//make the x scale of the shield bar image equal the heros current shield strength / their max shield strength (value between 0-1)
 		shieldBar.rectTransform.localScale = new Vector2(stats.currentShieldStrength / stats.shieldCapacity, 1.0f);
-
 	}
 	private void CheckShieldFull()
 	{
@@ -175,123 +266,149 @@ public class Hero : MonoBehaviour {
 	}
 	private void Jump()
 	{
-		//if the player is not blocking
-		if (!isBlocking)
+		if (!disableInput)
 		{
-			//if the player is on the ground layer then apply a force in the y direction
-			if (HelperFunctions.GroundCheck(edgeCol))
-				rb.AddForce(stats.jumpForce);
+			//if the player is not blocking
+			if (!isBlocking)
+			{
+				//if the player is on the ground layer then apply a force in the y direction
+				if (HelperFunctions.GroundCheck(edgeCol))
+					rb.AddForce(stats.jumpForce);
 
-			if (rb.velocity.y > stats.maxVelocity.y)
-				rb.velocity = new Vector2(rb.velocity.x, stats.maxVelocity.y);
+				if (rb.velocity.y > stats.maxVelocity.y)
+					rb.velocity = new Vector2(rb.velocity.x, stats.maxVelocity.y);
+			}
 		}
-
 	}
 	private void Run(float horizontalAxis)
 	{
-		//if the player is not blocking
-		if (!isBlocking)
+		if (!disableInput)
 		{
-			if (horizontalAxis > 0)
+			//if the player is not blocking
+			if (!isBlocking)
 			{
-				rb.AddForce(stats.movementForce);
-				facingRight = true;
-				//limit player velocity in right direction
-				if (rb.velocity.x > stats.maxVelocity.x)
-					rb.velocity = new Vector2(stats.maxVelocity.x, rb.velocity.y);
-			}
-			if (horizontalAxis < 0)
-			{
-				rb.AddForce(-stats.movementForce);
-				facingRight = false;
-				//limit players velocity in left direction
-				if (rb.velocity.x < -stats.maxVelocity.x) 
-					rb.velocity = new Vector2(-stats.maxVelocity.x, rb.velocity.y);
-			}
-		}
-		HelperFunctions.FlipScaleX(gameObject, facingRight);
-	}
-	protected virtual void Attack()
-	{
-		//if the player is not blocking they can attack and they havent already attacked
-		if (!isBlocking && canAttack && !isAttacking)
-		{
-			if (rangedAttack)
-			{
-				if (facingRight)
+				if (horizontalAxis > 0)
 				{
-					if (stats.attackSpeed < 0)
-						stats.attackSpeed = -stats.attackSpeed;
-					else
-						stats.attackSpeed = stats.attackSpeed;
-					
-					tmpProjectile = Instantiate(projectile, new Vector3(transform.position.x + edgeCol.bounds.extents.x + projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z), Quaternion.identity) as GameObject;
+					rb.AddForce(stats.movementForce);
+					facingRight = true;
+					//limit player velocity in right direction
+					if (rb.velocity.x > stats.maxVelocity.x)
+						rb.velocity = new Vector2(stats.maxVelocity.x, rb.velocity.y);
 				}
-				else
+				if (horizontalAxis < 0)
 				{
-					if (stats.attackSpeed > 0)
-						stats.attackSpeed = -stats.attackSpeed;
-					else
-						stats.attackSpeed = stats.attackSpeed;
-					
-					tmpProjectile = Instantiate(projectile, new Vector3(transform.position.x - edgeCol.bounds.extents.x - projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z), Quaternion.identity) as GameObject;
-
-					HelperFunctions.FlipScaleX(tmpProjectile, facingRight);
+					rb.AddForce(-stats.movementForce);
+					facingRight = false;
+					//limit players velocity in left direction
+					if (rb.velocity.x < -stats.maxVelocity.x) 
+						rb.velocity = new Vector2(-stats.maxVelocity.x, rb.velocity.y);
 				}
-					
 			}
-			else
-			{
-				RaycastHit2D hit = Physics2D.Raycast(transform.position + boxCol.bounds.extents, Vector2.right, stats.attackRange, HelperFunctions.collidableLayers);
-
-				if (hit.collider != null)
-					Debug.Log("Attacking!");
-			}
-			//the hero has attacked and will not be able to again until their cooldown is satisfied
-			isAttacking = true;
+			HelperFunctions.FlipScaleX(gameObject, facingRight);
 		}
+
 	}
-	protected virtual void Block()
+	//method to call the attack method when all the inside requirements are met
+	private void TryAttack()
 	{
-		//if the player is not attacking and they can block
-		if (!isAttacking && canBlock)
+		//if the player has input
+		if (!disableInput)
 		{
-			//display their shield bar
-			shieldBar.CrossFadeAlpha(1f, 0.4f, false);
+			//if the player is not blocking they can attack and they havent already attacked
+			if (!isBlocking && canAttack && !isAttacking)
+			{
+				Attack();
 
-			if (depleteOnHit)
-			{
-				//player is holding the block button and their shield will break on impact
-				isBlocking = true;
+				//the hero has attacked and will not be able to again until their cooldown is satisfied
+				isAttacking = true;
 			}
-			else
+		}
+
+	}
+	//method to get overriden for each heroes attack
+	protected virtual void Attack(){}
+
+	//method for resetting attack variables
+	[PunRPC] protected void ResetAttack() 
+	{
+		//player can attack again
+		isAttacking = false;
+
+		//stop sword animations
+		if (!rangedAttack)
+			anim.SetBool("isAttacking", false);
+
+		disableInput = false;
+	}
+	//method to call the block functiomn when all the requirements are satisfied
+	private void TryBlock()
+	{
+		//if the player has input
+		if (!disableInput)
+		{
+			//if the player is not attacking and they can block
+			if (!isAttacking && canBlock)
 			{
-				//player has pushed the block button is temporarily invinsible
-				startShieldTimer = true;
+				Block();
+
+				//call the block method over the network
+				if(photonView.isMine)
+					photonView.RPC("Block", PhotonTargets.Others);
 			}
-			//hero can not attack if they are blocking
-			canAttack = false;
 		}
 	}
-	protected virtual void UnBlock()
+	//method for blocking logic
+	protected virtual void Block() 
 	{
-		//if their shield breaks on impact
+		//display their shield bar
+		shieldBar.CrossFadeAlpha(1f, 0.4f, false);
+
 		if (depleteOnHit)
 		{
-			//check if their shield is full
-			CheckShieldFull();
-			//they are no longer blocking because they let go of the block keypress
-			isBlocking = false;
+			//player is holding the block button and their shield will break on impact
+			isBlocking = true;
+		}
+		else
+		{
+			//player has pushed the block button is temporarily invinsible
+			startShieldTimer = true;
+		}
+		//hero can not attack if they are blocking
+		canAttack = false;
+	}
+	//method for unblocking logic
+	private void UnBlock()
+	{
+		//if their shield breaks on impact
+		if (depleteOnHit) 
+		{
+			FinishedBlocking();
+
+			//call the finished blocking method over the network
+			if(photonView.isMine){
+				photonView.RPC("FinishedBlocking", PhotonTargets.Others);
+			}
 		}
 		//The hero can attack once they are no longer blocking 
 		canAttack = true;
+
 	}
+	//method for when the player is finished blocking
+	protected virtual void FinishedBlocking()
+	{
+		//check if their shield is full
+		CheckShieldFull();
+		//they are no longer blocking because they let go of the block keypress
+		isBlocking = false;
+	}
+	//method for the players shield breaking
 	private void ShieldDepleted()
 	{
 		// this will get increased in update because canBlock is false
 		stats.currentShieldStrength = 0.0f;
 		//player can no longer block 
 		canBlock = false;
+		//stop the shield timer
 		startShieldTimer = false;
 
 		if(transparencyCor == null) 
@@ -305,7 +422,7 @@ public class Hero : MonoBehaviour {
 		stats.lives--;
 
 		//if a hero has no lives and there are more than one hero
-		if (stats.lives == 0 && LevelManager.Instance.heroes.Count > 1)
+		if (stats.lives == 0 && HeroManager.Instance.heroes.Length > 1)
 		{
 			//change the camera target
 			UpdateCameraTarget();
@@ -313,8 +430,8 @@ public class Hero : MonoBehaviour {
 	}
 	private void UpdateCameraTarget()
 	{
-		if (gameObject.tag == "Player")
-			isFollowTarget = true;	
+//		if (gameObject.tag == "Player")
+//			isFollowTarget = true;	
 	}
 
 	protected virtual void OnCollisionStay2D(Collision2D other)
@@ -324,6 +441,7 @@ public class Hero : MonoBehaviour {
 			grounded = true;
 		}
 	}
+
 	protected virtual void OnCollisionExit2D(Collision2D other)
 	{
 		if (((1 << other.gameObject.layer) & HelperFunctions.collidableLayers) != 0)
@@ -331,14 +449,34 @@ public class Hero : MonoBehaviour {
 			grounded = false;
 		}
 	}
-	private void SwitchColour()
+	//method for switching the players colour
+	[PunRPC] public void SwitchColour()
 	{
+		//set the next colour
 		colour.NextColour();
-		sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
+
+		//set the sprites colour to equal what the new colour is
+		sprite.color = colour.GetCurrentColor();
+
+		//call the switch colour method over the network so players can see each others colour
+		if(photonView.isMine)
+			photonView.RPC("SwitchColour", PhotonTargets.OthersBuffered);
+
+		//sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
 	}
-	private void SwitchShade()
+	//method for switching the players shade
+	[PunRPC] public void SwitchShade()
 	{
+		//set the next shade
 		colour.NextShade();
-		sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
+
+		//set the colour of the shade to equal what the new shade is 
+		sprite.color = colour.GetCurrentColor();
+
+		//call the switch shade method so the players can see each others shades
+		if(photonView.isMine)
+			photonView.RPC("SwitchShade", PhotonTargets.OthersBuffered);
+
+		//sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
 	}
 }

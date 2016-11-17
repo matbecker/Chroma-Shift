@@ -4,32 +4,103 @@ using System.Collections;
 public class Ninja : Hero {
 
 	[SerializeField] private bool canDoubleJump;
-	// Use this for initialization
+	[SerializeField] GameObject dagger;
+	[SerializeField] SpriteRenderer headband;
+	[SerializeField] float invisibleDuration;
+	[SerializeField] float lerpDuration;
+	private Color currentColor;
+	private float startLerpTimer;
+	private float endLerpTimer;
+	private bool freezeBlock;
+
+
 	protected override void Start ()
 	{	
-		InputManager.Instance.DoubleJump += DoubleJump;
 		base.Start ();
+
+		if (photonView.isMine)
+			InputManager.Instance.DoubleJump += DoubleJump;
+		
+		currentColor = colour.GetCurrentColor();
+
+		//ninja cannot see his shield timer
+		shieldBar.enabled = false;
 	}
+
 	protected override void OnDestroy ()
 	{
-		InputManager.Instance.DoubleJump -= DoubleJump;
 		base.OnDestroy ();
+
+		if (photonView.isMine)
+			InputManager.Instance.DoubleJump -= DoubleJump;
 	}
 	
-	// Update is called once per frame
+
 	protected override void Update ()
 	{
 		base.Update ();
+
+		if (startShieldTimer)
+		{
+			//make the ninja sprite dissapear
+			sprite.color = Color.Lerp(sprite.color, Color.clear, startLerpTimer);
+			//make the headband sprite dissapear
+			headband.color = Color.Lerp(headband.color, Color.clear, startLerpTimer);
+			//make the dagger dissapear
+			dagger.SetActive(false);
+
+			startLerpTimer += Time.deltaTime / lerpDuration;
+		}
+		else
+		{
+			freezeBlock = false;
+			//make the ninja sprite reappear
+			sprite.color = Color.Lerp(Color.clear, currentColor, endLerpTimer);
+			//make the headband sprite reappear
+			headband.color = Color.Lerp(Color.clear, Color.black, endLerpTimer);
+			//make the dagger reappear
+			dagger.SetActive(true);
+
+			endLerpTimer += Time.deltaTime / lerpDuration;
+		}
 	}
+
 	protected override void Attack ()
 	{
 		base.Attack ();
+		disableInput = true;
+
+		PlayAttackAnimation();
+
+		//call the play attack animation over the network
+		if (photonView.isMine)
+			photonView.RPC("PlayAttackAnimation", PhotonTargets.Others);
+
+		RaycastHit2D hit = Physics2D.Raycast(transform.position + boxCol.bounds.extents, Vector2.right, stats.attackRange, HelperFunctions.collidableLayers);
+
+		if (hit.collider != null)
+			Debug.Log("Attacking!");
 	}
-	protected override void Block ()
+	//method for playing the attack animation
+	[PunRPC] private void PlayAttackAnimation()
+	{
+		anim.SetBool("isAttacking", true);
+	}
+
+	[PunRPC] protected override void Block ()
 	{
 		base.Block ();
-		//ninja cannot see his shield timer
-		shieldBar.enabled = false;
+
+		//get the current color the ninjas sprite is before he turns invisible
+		currentColor = colour.GetCurrentColor();
+
+		//dont allow the player to reset the LerpTimer if they are currently blocking
+		if (!freezeBlock && canBlock)
+		{
+			startLerpTimer = 0.0f;
+			endLerpTimer = 0.0f;
+		}
+		freezeBlock = true;
 	}
 	protected override void OnCollisionExit2D (Collision2D other)
 	{

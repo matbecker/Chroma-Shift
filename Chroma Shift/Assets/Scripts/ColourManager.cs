@@ -19,7 +19,7 @@ public class ColourManager : MonoBehaviour {
 	//Container that has all the colors in it
 	public ColorContainer[] colors;
 	//index for the current shade
-	private int shadeIndex;
+	public int shadeIndex;
 	// Use this for initialization
 	void Start () 
 	{
@@ -53,4 +53,5 @@ public class ColourManager : MonoBehaviour {
 		c.a = 1;
 		return c;
 	}
+
 }

@@ -6,6 +6,7 @@ public class LoadScreenOnClick : MonoBehaviour {
 
 	public void LoadByIndex(int sceneIndex)
     {
+		SceneManager.LoadScene("CharacterSelectScreen");
 
     }
 }

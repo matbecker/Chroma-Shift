@@ -59,15 +59,13 @@ public class ColourWheel : MonoBehaviour {
 	}
 	void Shift()
 	{
-		//set variables up
-
 		//coin flip to determine if the wheel should spin right or left
 		randDirection = Random.Range(0,2);
 		//wheel will spin at random speed between 50 and 100
 		rotationSpeed = Random.Range(50.0f, 100.0f);
 		//spin for 5 to 10 seconds
 		spinTime = Random.Range(5.0f,10.0f);
-
+		//start spinning the wheel
 		startSpinning = true;
 
 	}
