@@ -44,7 +44,7 @@ public class LevelManager : Photon.MonoBehaviour {
 		{
 			go = Instantiate(HeroManager.Instance.CurrentHeroPrefab, startPoint, Quaternion.identity) as GameObject;
 		}
-		var colour = go.GetComponent<Colour>();
+		var colour = go.GetComponent<ColourManager>();
 
 		colour.currentColourType = HeroManager.Instance.currentColorType;
 		colour.shadeIndex = HeroManager.Instance.currentShadeIndex;

@@ -79,7 +79,7 @@ public class CharacterSelectScreen : Photon.MonoBehaviour {
 	{
 		if (isFocusedScreen)
 		{
-			var colour = characters[currentHero].GetComponent<Colour>();
+			var colour = characters[currentHero].GetComponent<ColourManager>();
 			HeroManager.Instance.currentColorType = colour.currentColourType;
 			HeroManager.Instance.currentShadeIndex = colour.shadeIndex;
 

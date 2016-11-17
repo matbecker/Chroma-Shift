@@ -26,7 +26,7 @@ public class Hero : Photon.MonoBehaviour {
 	[SerializeField] protected EdgeCollider2D edgeCol;
 	[SerializeField] protected BoxCollider2D boxCol;
 	[SerializeField] protected Image shieldBar;
-	[SerializeField] protected Colour colour;
+	[SerializeField] protected ColourManager colour;
 	[SerializeField] protected SpriteRenderer sprite;
 	[SerializeField] protected GameObject projectile;
 	[SerializeField] protected GameObject tmpProjectile;
@@ -81,6 +81,8 @@ public class Hero : Photon.MonoBehaviour {
 		edgeCol = gameObject.GetComponent<EdgeCollider2D>();
 		//get the box trigger of the gameObject
 		boxCol = gameObject.GetComponent<BoxCollider2D>();
+
+
 		//ensure the player starts with max health
 		stats.currentHealth = stats.maxHealth;
 		//ensure the players shield is at max capacity
@@ -103,7 +105,7 @@ public class Hero : Photon.MonoBehaviour {
 			//Get the Photon Data
 			var data = photonView.instantiationData;
 			//sync other players colour data with photon
-			colour.currentColourType = (Colour.ColourType)data[0];
+			colour.currentColourType = (ColourManager.ColourType)data[0];
 			//sync other players shade data with photon
 			colour.shadeIndex = (int)data[1];
 			//dont worry about the other players gravity
@@ -115,6 +117,7 @@ public class Hero : Photon.MonoBehaviour {
 
 	public void SetupSprite()
 	{
+		colour = gameObject.GetComponent<ColourManager>();
 		//Get the sprite renderer component
 		sprite = gameObject.GetComponent<SpriteRenderer>();
 		//set the color to the players colour 

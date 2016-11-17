@@ -22,7 +22,7 @@ public class HeroManager : MonoBehaviour {
 		}
 	}
 	public int heroIndex;
-	public Colour.ColourType currentColorType;
+	public ColourManager.ColourType currentColorType;
 	public int currentShadeIndex;
 
 
