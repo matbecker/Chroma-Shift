@@ -24,12 +24,23 @@ public class NetworkManager : MonoBehaviour {
 
 	public void StartServer(string roomName) 
 	{
+		
 		PhotonNetwork.CreateRoom(roomName);
 	}
 
 	public void JoinServer(string roomName)
 	{
+		
 		PhotonNetwork.JoinRoom(roomName);
+	}
+	public void Connect()
+	{
+		PhotonNetwork.ConnectUsingSettings("0.1");
+
+	}
+	public void Disconnect()
+	{
+		PhotonNetwork.Disconnect();
 	}
 	void OnGUI()
 	{
@@ -53,8 +64,9 @@ public class NetworkManager : MonoBehaviour {
 	// Use this for initialization
 	void Start () 
 	{
-		PhotonNetwork.ConnectUsingSettings("0.1");
+		
 	}
+
 	
 	// Update is called once per frame
 	void Update () {

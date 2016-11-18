@@ -8,7 +8,6 @@ public class Ninja : Hero {
 	[SerializeField] SpriteRenderer headband;
 	[SerializeField] float invisibleDuration;
 	[SerializeField] float lerpDuration;
-	private Color currentColor;
 	private float startLerpTimer;
 	private float endLerpTimer;
 	private bool freezeBlock;
@@ -20,8 +19,6 @@ public class Ninja : Hero {
 
 		if (photonView.isMine)
 			InputManager.Instance.DoubleJump += DoubleJump;
-		
-		currentColor = colour.GetCurrentColor();
 
 		//ninja cannot see his shield timer
 		shieldBar.enabled = false;
@@ -55,7 +52,7 @@ public class Ninja : Hero {
 		{
 			freezeBlock = false;
 			//make the ninja sprite reappear
-			sprite.color = Color.Lerp(Color.clear, currentColor, endLerpTimer);
+			sprite.color = Color.Lerp(Color.clear, colour.GetCurrentColor(), endLerpTimer);
 			//make the headband sprite reappear
 			headband.color = Color.Lerp(Color.clear, Color.black, endLerpTimer);
 			//make the dagger reappear
@@ -90,9 +87,6 @@ public class Ninja : Hero {
 	[PunRPC] protected override void Block ()
 	{
 		base.Block ();
-
-		//get the current color the ninjas sprite is before he turns invisible
-		currentColor = colour.GetCurrentColor();
 
 		//dont allow the player to reset the LerpTimer if they are currently blocking
 		if (!freezeBlock && canBlock)

@@ -57,10 +57,11 @@ public class Hero : Photon.MonoBehaviour {
 
 	protected virtual void Awake()
 	{
+		gameObject.tag = "Player";
+		if (photonView.isMine || PhotonNetwork.offlineMode)
+			isFollowTarget = true;
+		
 		DontDestroyOnLoad(gameObject);
-
-		if (photonView.isMine)
-			gameObject.tag = "Player";
 	}
 	protected virtual void Start () 
 	{
@@ -111,6 +112,9 @@ public class Hero : Photon.MonoBehaviour {
 			//dont worry about the other players gravity
 			rb.gravityScale = 0;
 		}
+		//if (photonView.isMine || PhotonNetwork.offlineMode)
+		
+		//isFollowTarget = true;
 
 		SetupSprite();
 	}
@@ -332,7 +336,7 @@ public class Hero : Photon.MonoBehaviour {
 	protected virtual void Attack(){}
 
 	//method for resetting attack variables
-	[PunRPC] protected void ResetAttack() 
+	[PunRPC] public void ResetAttack() 
 	{
 		//player can attack again
 		isAttacking = false;
@@ -433,8 +437,6 @@ public class Hero : Photon.MonoBehaviour {
 	}
 	private void UpdateCameraTarget()
 	{
-//		if (gameObject.tag == "Player")
-//			isFollowTarget = true;	
 	}
 
 	protected virtual void OnCollisionStay2D(Collision2D other)
