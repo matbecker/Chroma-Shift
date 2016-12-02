@@ -18,8 +18,9 @@ public class Archer : Hero {
 	{
 		base.OnDestroy ();
 
-		if(photonView.isMine)
-			InputManager.Instance.TrackMouseEvent -= TrackMouseEvent;
+		if (InputManager.Instance)
+			if(photonView.isMine)
+				InputManager.Instance.TrackMouseEvent -= TrackMouseEvent;
 	}
 	//method for the archers attack
 	protected override void Attack ()
@@ -34,7 +35,7 @@ public class Archer : Hero {
 			arrowSpawnPoint = new Vector3(transform.position.x - edgeCol.bounds.extents.x - projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z);
 
 		//call the arc method to get the velocity for the arrow
-		var arrowVelocity = HelperFunctions.Arc(bow.GetComponent<Transform>()) * stats.attackSpeed;
+		Vector2 arrowVelocity = HelperFunctions.Arc(bow.GetComponent<Transform>()) * stats.attackSpeed;
 
 		//negate the velocity if the hero is facing left
 		if(!facingRight)
@@ -51,11 +52,11 @@ public class Archer : Hero {
 	[PunRPC] void ShootArrow(Vector2 spawn, Vector2 velocity)
 	{
 		//instantiate the arrow
-		var arrow = Instantiate(projectile, spawn, Quaternion.identity) as GameObject;
+		GameObject arrow = Instantiate(projectile, spawn, Quaternion.identity) as GameObject;
 		//set the projectiles velocity
 		arrow.GetComponent<Rigidbody2D>().velocity = velocity;
 		//get the scale of the arrow
-		var scale = arrow.transform.localScale;
+		Vector3 scale = arrow.transform.localScale;
 		//flip the scale of the arrow if the velocity has been negated 
 		arrow.transform.localScale = new Vector3(scale.x * (velocity.x < 0 ? -1 : 1), scale.y, scale.z);
 
