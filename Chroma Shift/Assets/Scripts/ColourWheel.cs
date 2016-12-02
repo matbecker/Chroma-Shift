@@ -60,11 +60,11 @@ public class ColourWheel : MonoBehaviour {
 
 		Debug.Log(faceIndex);
 
-		foreach (string colourString in colourWheelFaceColours[faceIndex].name)
-		{
-			//string[] split = colourString.Split(delimiter);
-			//colourString.Split(delimiter, 2);
-		}
+//		foreach (string colourString in colourWheelFaceColours[faceIndex].name)
+//		{
+//			string[] split = colourString.Split(delimiter);
+//			colourString.Split(delimiter, 2);
+//		}
 			
 	}
 	void Spin()
