@@ -63,7 +63,7 @@ public class ColourWheel : MonoBehaviour {
 		foreach (string colourString in colourWheelFaceColours[faceIndex].name)
 		{
 			//string[] split = colourString.Split(delimiter);
-			colourString.Split(delimiter, 2);
+			//colourString.Split(delimiter, 2);
 		}
 			
 	}
