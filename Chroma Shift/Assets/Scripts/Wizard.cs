@@ -36,10 +36,13 @@ public class Wizard : Hero {
 	{
 		base.OnDestroy ();
 
-		if(photonView.isMine)
+		if (InputManager.Instance)
 		{
-			InputManager.Instance.Hover -= Hover;
-			InputManager.Instance.UnAttack -= UnAttack;
+			if(photonView.isMine)
+			{
+				InputManager.Instance.Hover -= Hover;
+				InputManager.Instance.UnAttack -= UnAttack;
+			}
 		}
 	}
 

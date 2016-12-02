@@ -82,9 +82,6 @@ public class CharacterSelectScreen : Photon.MonoBehaviour {
 			var colour = characters[currentHero].GetComponent<ColourManager>();
 			HeroManager.Instance.currentColorType = colour.currentColourType;
 			HeroManager.Instance.currentShadeIndex = colour.shadeIndex;
-
-//			if (PhotonNetwork.inRoom)
-//				PhotonNetwork.automaticallySyncScene = true;
 			
 			if (PhotonNetwork.offlineMode)
 				SceneManager.LoadScene("Level1");

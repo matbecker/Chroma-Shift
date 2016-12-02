@@ -57,10 +57,12 @@ public class Hero : Photon.MonoBehaviour {
 
 	protected virtual void Awake()
 	{
-		DontDestroyOnLoad(gameObject);
+		gameObject.tag = "Player";
 
-		if (photonView.isMine)
-			gameObject.tag = "Player";
+		if (photonView.isMine || PhotonNetwork.offlineMode)
+			isFollowTarget = true;
+		
+		DontDestroyOnLoad(gameObject);
 	}
 	protected virtual void Start () 
 	{
@@ -111,6 +113,9 @@ public class Hero : Photon.MonoBehaviour {
 			//dont worry about the other players gravity
 			rb.gravityScale = 0;
 		}
+		//if (photonView.isMine || PhotonNetwork.offlineMode)
+		
+		//isFollowTarget = true;
 
 		SetupSprite();
 	}
@@ -126,17 +131,21 @@ public class Hero : Photon.MonoBehaviour {
 
 	protected virtual void OnDestroy () 
 	{
-		if (photonView.isMine)
+		if (InputManager.Instance)
 		{
-			//unregister events
-			InputManager.Instance.Jump -= Jump;
-			InputManager.Instance.Run -= Run;
-			InputManager.Instance.Attack -= TryAttack;
-			InputManager.Instance.Block -= TryBlock;
-			InputManager.Instance.UnBlock -= UnBlock;
-			InputManager.Instance.SwitchColour -= SwitchColour;
-			InputManager.Instance.SwitchShade -= SwitchShade;
+			if (photonView.isMine)
+			{
+				//unregister events
+				InputManager.Instance.Jump -= Jump;
+				InputManager.Instance.Run -= Run;
+				InputManager.Instance.Attack -= TryAttack;
+				InputManager.Instance.Block -= TryBlock;
+				InputManager.Instance.UnBlock -= UnBlock;
+				InputManager.Instance.SwitchColour -= SwitchColour;
+				InputManager.Instance.SwitchShade -= SwitchShade;
+			}
 		}
+
 	}
 	//method for passing stuff to photon 
 	public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
@@ -246,6 +255,9 @@ public class Hero : Photon.MonoBehaviour {
 		}
 		//make the x scale of the shield bar image equal the heros current shield strength / their max shield strength (value between 0-1)
 		shieldBar.rectTransform.localScale = new Vector2(stats.currentShieldStrength / stats.shieldCapacity, 1.0f);
+
+		if (transform.position.y < LevelManager.Instance.levelBottom)
+			Death();
 	}
 	private void CheckShieldFull()
 	{
@@ -332,7 +344,7 @@ public class Hero : Photon.MonoBehaviour {
 	protected virtual void Attack(){}
 
 	//method for resetting attack variables
-	[PunRPC] protected void ResetAttack() 
+	[PunRPC] public void ResetAttack() 
 	{
 		//player can attack again
 		isAttacking = false;
@@ -424,6 +436,7 @@ public class Hero : Photon.MonoBehaviour {
 	{
 		stats.lives--;
 
+		transform.position = LevelManager.Instance.currentSpawnPoint.position;
 		//if a hero has no lives and there are more than one hero
 		if (stats.lives == 0 && HeroManager.Instance.heroes.Length > 1)
 		{
@@ -433,8 +446,6 @@ public class Hero : Photon.MonoBehaviour {
 	}
 	private void UpdateCameraTarget()
 	{
-//		if (gameObject.tag == "Player")
-//			isFollowTarget = true;	
 	}
 
 	protected virtual void OnCollisionStay2D(Collision2D other)

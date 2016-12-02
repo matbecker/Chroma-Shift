@@ -8,6 +8,7 @@ public class MainMenu : MonoBehaviour {
 	public InputField roomNameInput;
 	[SerializeField] GameObject[] screens;
 	int currentScreen;
+
 	void Start () 
 	{
 		currentScreen = 0;
@@ -20,21 +21,36 @@ public class MainMenu : MonoBehaviour {
 		else
 			PhotonNetwork.LoadLevel("CharacterSelectScreen");
 	}
+
 	public void SwitchScreen(int newScreenIndex)
 	{
 		screens[currentScreen].SetActive(false);
 		screens[newScreenIndex].SetActive(true);
 		currentScreen = newScreenIndex;
 	}
+
+	public void ConnectToServer()
+	{
+		NetworkManager.Instance.Connect();
+		PhotonNetwork.offlineMode = false;
+	}
+
+	public void DisconnectFromServer()
+	{
+		NetworkManager.Instance.Disconnect();
+		PhotonNetwork.offlineMode = true;
+	}
+
 	public void Quit()
 	{
 		Application.Quit();
 	}
 
-	public void SinglePlayer() { 
+	public void SinglePlayer() 
+	{ 
 		PhotonNetwork.offlineMode = true;
-		PhotonNetwork.CreateRoom("offlineRoom");
 	}
+
 	public void CreateServer() 
 	{
 		NetworkManager.Instance.StartServer(roomNameInput.text);
