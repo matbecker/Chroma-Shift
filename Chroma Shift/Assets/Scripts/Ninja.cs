@@ -28,8 +28,9 @@ public class Ninja : Hero {
 	{
 		base.OnDestroy ();
 
-		if (photonView.isMine)
-			InputManager.Instance.DoubleJump -= DoubleJump;
+		if (InputManager.Instance)
+			if (photonView.isMine)
+				InputManager.Instance.DoubleJump -= DoubleJump;
 	}
 	
 
