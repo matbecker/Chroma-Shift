@@ -65,23 +65,34 @@ public class Archer : Hero {
 	[PunRPC] protected override void Block ()
 	{
 		base.Block ();
-		//hide the archers bow
-		bow.GetComponent<SpriteRenderer>().sortingOrder = 1;
-		//make the archers shield appear
-		shield.GetComponent<SpriteRenderer>().sortingOrder = 3;
-		//move the shield ahead a bit
-		shield.transform.Translate(new Vector3(0.1f,0.0f,0.0f));
+
+		if (canBlock)
+		{
+			//hide the archers bow
+			bow.GetComponent<SpriteRenderer>().sortingOrder = 1;
+			//make the archers shield appear
+			shield.GetComponent<SpriteRenderer>().sortingOrder = 3;
+			//move the shield ahead a bit
+			shield.transform.Translate(new Vector3(0.1f,0.0f,0.0f));
+		}
+
 	}
 
 	[PunRPC] protected override void FinishedBlocking()
 	{
 		base.FinishedBlocking();
-		//make the bow reappear
-		bow.GetComponent<SpriteRenderer>().sortingOrder = 3;
-		//hide the shield again
-		shield.GetComponent<SpriteRenderer>().sortingOrder = 1;
-		//move the shield back to its original position
-		shield.transform.Translate(new Vector3(-0.1f,0.0f,0.0f));
+
+		//TODO fix bug that the shield moves ahead one and is stuck ahead
+		if (canBlock)
+		{
+			//make the bow reappear
+			bow.GetComponent<SpriteRenderer>().sortingOrder = 3;
+			//hide the shield again
+			shield.GetComponent<SpriteRenderer>().sortingOrder = 1;
+			//move the shield back to its original position
+			shield.transform.Translate(new Vector3(-0.1f,0.0f,0.0f));
+		}
+
 	}
 
 	private void TrackMouseEvent(float x, float y)
@@ -97,5 +108,13 @@ public class Archer : Hero {
 	protected override void Update ()
 	{
 		base.Update ();
+
+		if (canBlock)
+		{
+			shield.SetActive(true);
+		}
+		else
+			shield.SetActive(false);
+
 	}
 }

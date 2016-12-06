@@ -3,6 +3,8 @@ using System.Collections;
 
 public class Swordsmen : Hero {
 
+	[SerializeField] GameObject sword;
+
 	protected override void Start ()
 	{
 		base.Start ();
@@ -27,7 +29,7 @@ public class Swordsmen : Hero {
 		RaycastHit2D hit = Physics2D.Raycast(transform.position + boxCol.bounds.extents, Vector2.right, stats.attackRange, HelperFunctions.collidableLayers);
 
 		if (hit.collider != null)
-			Debug.Log("Attacking!");
+			hit.collider.gameObject.SendMessage("Damage", stats.attackPower, SendMessageOptions.DontRequireReceiver);
 	}
 	//method for playing the ninjas attack animation
 	[PunRPC] private void PlayAttackAnimation()
@@ -50,5 +52,12 @@ public class Swordsmen : Hero {
 	protected override void Update ()
 	{
 		base.Update ();
+
+		if (canBlock)
+		{
+			sword.SetActive(true);
+		}
+		else
+			sword.SetActive(false);
 	}
 }

@@ -3,40 +3,13 @@ using System.Collections;
 
 public class Sword : MonoBehaviour {
 
-	[SerializeField] CameraBehaviour cam;
-	[SerializeField] BoxCollider2D aoeTrigger;
-	private float shakeTimer;
+	[SerializeField] GameObject swordsmen;
 
-
-	void Start()
+	void OnTriggerEnter2D(Collider2D other)
 	{
-		cam = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<CameraBehaviour>();
-		aoeTrigger.enabled = false;
-	}
-		
-	void Update () 
-	{
-		if (shakeTimer > 0.0f)
+		if (other.CompareTag("Enemy"))
 		{
-			Vector2 shakeAmount = Random.insideUnitCircle * 0.2f;
-			//shake the cameras position randomly by a small value 
-			cam.GetComponent<Transform>().position = new Vector3(cam.GetComponent<Transform>().position.x + shakeAmount.x, cam.GetComponent<Transform>().position.y + shakeAmount.y, cam.GetComponent<Transform>().position.z);
-
-			shakeTimer -= Time.deltaTime;
+			other.SendMessage("Damage", swordsmen.GetComponent<Hero>().stats.attackPower, SendMessageOptions.DontRequireReceiver);
 		}
-		else
-			shakeTimer = 0.0f;
-	}
-
-	public void StartAreaOfEffect()
-	{
-		//start the shaking effect
-		shakeTimer = 0.2f;
-		aoeTrigger.enabled = true;
-	}
-
-	public void StopAreaOfEffect()
-	{
-		aoeTrigger.enabled = false;
 	}
 }
