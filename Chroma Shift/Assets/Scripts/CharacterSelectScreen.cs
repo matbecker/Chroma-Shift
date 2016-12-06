@@ -24,6 +24,7 @@ public class CharacterSelectScreen : Photon.MonoBehaviour {
 				var h = go.GetComponent<Hero>();
 				h.enabled = false;
 				h.SetupSprite();
+				h.stats.colourShifts = 100;
 				go.GetComponent<Rigidbody2D>().gravityScale = 0;
 				go.transform.localPosition = hero.selectScreenPosition;
 				go.transform.localScale = new Vector3(100.0f,100.0f,1.0f);

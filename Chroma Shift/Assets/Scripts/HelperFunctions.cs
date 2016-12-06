@@ -5,6 +5,7 @@ using UnityEngine.UI;
 public static class HelperFunctions {
 
 	public static LayerMask collidableLayers = 1 << LayerMask.NameToLayer("Collidable");
+	private static bool shrink = true;
 
 	public static IEnumerator TransitionTransparency(Image img, float duration)
 	{
@@ -16,7 +17,12 @@ public static class HelperFunctions {
 			yield return new WaitForSeconds(duration);
 		}
 	}
+	public static void ColourLerp(GameObject obj, Color start, Color end, float duration, float timer)
+	{
+		obj.GetComponent<SpriteRenderer>().color = Color.Lerp(start, end, duration);
 
+		timer += Time.deltaTime / duration;
+	}
 	public static Vector3 ArcTowards(Transform start, Transform end, float angle)
 	{
 		var direction = end.position - start.position;
@@ -66,5 +72,19 @@ public static class HelperFunctions {
 			obj.transform.localScale = new Vector3(1.0f, 1.0f,1.0f);
 		else
 			obj.transform.localScale = new Vector3(-1.0f, 1.0f, 1.0f);
+	}
+	public static void ShrinkAndExpandText(Text text, int min, int max)
+	{
+		if (text.fontSize >= min && shrink)
+			text.fontSize--;
+
+		if (text.fontSize <= min)
+			shrink = false;
+
+		if (text.fontSize <= max && !shrink)
+			text.fontSize++;
+
+		if (text.fontSize >= max)
+			shrink = true;
 	}
 }

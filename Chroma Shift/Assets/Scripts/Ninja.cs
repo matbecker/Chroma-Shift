@@ -8,6 +8,7 @@ public class Ninja : Hero {
 	[SerializeField] SpriteRenderer headband;
 	[SerializeField] float invisibleDuration;
 	[SerializeField] float lerpDuration;
+	[SerializeField] BoxCollider2D swordTrigger;
 	private float startLerpTimer;
 	private float endLerpTimer;
 	private bool freezeBlock;
@@ -61,6 +62,10 @@ public class Ninja : Hero {
 
 			endLerpTimer += Time.deltaTime / lerpDuration;
 		}
+		if (isAttacking)
+			swordTrigger.enabled = true;
+		else
+			swordTrigger.enabled = false;
 	}
 
 	protected override void Attack ()
@@ -69,15 +74,9 @@ public class Ninja : Hero {
 		disableInput = true;
 
 		PlayAttackAnimation();
-
 		//call the play attack animation over the network
 		if (photonView.isMine)
 			photonView.RPC("PlayAttackAnimation", PhotonTargets.Others);
-
-		RaycastHit2D hit = Physics2D.Raycast(transform.position + boxCol.bounds.extents, Vector2.right, stats.attackRange, HelperFunctions.collidableLayers);
-
-		if (hit.collider != null)
-			Debug.Log("Attacking!");
 	}
 	//method for playing the attack animation
 	[PunRPC] private void PlayAttackAnimation()

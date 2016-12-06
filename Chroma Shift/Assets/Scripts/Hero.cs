@@ -1,8 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class Hero : Photon.MonoBehaviour {
+
+	public enum Type { Archer, Ninja, Swordsmen, Wizard };
 
 	[System.Serializable]
 	public class Stats
@@ -19,9 +22,11 @@ public class Hero : Photon.MonoBehaviour {
 		public Vector2 maxVelocity;
 		public Vector2 jumpForce;
 		public Vector2 movementForce;
+		public int colourShifts;
+		public float damageCooldownTime;
 	}
-
-	[SerializeField] protected Stats stats;
+	public Stats stats;
+	public Type type;
 	[SerializeField] protected Rigidbody2D rb;
 	[SerializeField] protected EdgeCollider2D edgeCol;
 	[SerializeField] protected BoxCollider2D boxCol;
@@ -36,15 +41,18 @@ public class Hero : Photon.MonoBehaviour {
 	private bool grounded;
 	protected bool startShieldTimer;
 	protected bool canBlock;
-	private bool isBlocking;
+	protected bool isBlocking;
 	private bool canAttack;
 	public bool isAttacking;
 	private bool rechargeShield;
 	protected bool disableInput;
 	protected bool facingRight;
 	protected bool isInvinsible;
+	protected bool isDamaged;
 	public bool isFollowTarget;
+	public bool isInit;
 	private float timer;
+	private float CooldownTimer;
 	private Coroutine transparencyCor;
 
 	//Online Synchronization variables
@@ -61,7 +69,7 @@ public class Hero : Photon.MonoBehaviour {
 
 		if (photonView.isMine || PhotonNetwork.offlineMode)
 			isFollowTarget = true;
-		
+
 		DontDestroyOnLoad(gameObject);
 	}
 	protected virtual void Start () 
@@ -118,6 +126,7 @@ public class Hero : Photon.MonoBehaviour {
 		//isFollowTarget = true;
 
 		SetupSprite();
+		isInit = true;
 	}
 
 	public void SetupSprite()
@@ -190,7 +199,8 @@ public class Hero : Photon.MonoBehaviour {
 			SyncedMovement();
 		}
 
-		if(photonView.isMine){
+		if(photonView.isMine)
+		{
 			//if the player has attacked
 			if (isAttacking)
 			{
@@ -253,10 +263,21 @@ public class Hero : Photon.MonoBehaviour {
 			//check if their shield is full
 			CheckShieldFull();
 		}
+		if (isDamaged)
+		{
+			CooldownTimer += Time.deltaTime;
+
+			if (CooldownTimer > stats.damageCooldownTime)
+			{
+				isDamaged = false;
+				CooldownTimer = 0.0f;
+			}
+		}
 		//make the x scale of the shield bar image equal the heros current shield strength / their max shield strength (value between 0-1)
 		shieldBar.rectTransform.localScale = new Vector2(stats.currentShieldStrength / stats.shieldCapacity, 1.0f);
 
-		if (transform.position.y < LevelManager.Instance.levelBottom)
+
+		if (transform.position.y < LevelManager.Instance.levelBottom || stats.currentHealth <= 0 || LevelManager.Instance.levelCompletionTimer <= 0)
 			Death();
 	}
 	private void CheckShieldFull()
@@ -436,6 +457,8 @@ public class Hero : Photon.MonoBehaviour {
 	{
 		stats.lives--;
 
+		stats.currentHealth = stats.maxHealth;
+
 		transform.position = LevelManager.Instance.currentSpawnPoint.position;
 		//if a hero has no lives and there are more than one hero
 		if (stats.lives == 0 && HeroManager.Instance.heroes.Length > 1)
@@ -443,11 +466,31 @@ public class Hero : Photon.MonoBehaviour {
 			//change the camera target
 			UpdateCameraTarget();
 		}
+		//clear the current enemy wave
+		EnemySpawner.enemyWave.Clear();
+
+//		if (stats.lives <= 0)
+//		{
+//			SceneManager.LoadScene("Level1");
+//		}
 	}
 	private void UpdateCameraTarget()
 	{
 	}
+	protected virtual void OnCollisionEnter2D(Collision2D other)
+	{
+		if (other.collider.CompareTag("Enemy") && isBlocking && canBlock)
+		{
+			other.gameObject.SendMessage("Damage", 2, SendMessageOptions.DontRequireReceiver);
 
+			stats.currentShieldStrength -= 2.0f;
+		}
+		if (other.collider.CompareTag("ShiftPowerUp") && stats.colourShifts < 5)
+		{
+			stats.colourShifts++;
+			Destroy(other.gameObject);
+		}
+	}
 	protected virtual void OnCollisionStay2D(Collision2D other)
 	{
 		if (((1 << other.gameObject.layer) & HelperFunctions.collidableLayers) != 0)
@@ -466,15 +509,21 @@ public class Hero : Photon.MonoBehaviour {
 	//method for switching the players colour
 	[PunRPC] public void SwitchColour()
 	{
-		//set the next colour
-		colour.NextColour();
+		
+		if (stats.colourShifts != 0)
+		{
+			stats.colourShifts--;
+			//set the next colour
+			colour.NextColour();
 
-		//set the sprites colour to equal what the new colour is
-		sprite.color = colour.GetCurrentColor();
+			//set the sprites colour to equal what the new colour is
+			sprite.color = colour.GetCurrentColor();
 
-		//call the switch colour method over the network so players can see each others colour
-		if(photonView.isMine)
-			photonView.RPC("SwitchColour", PhotonTargets.OthersBuffered);
+			//call the switch colour method over the network so players can see each others colour
+			if(photonView.isMine)
+				photonView.RPC("SwitchColour", PhotonTargets.OthersBuffered);
+		}
+
 
 		//sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
 	}
@@ -492,5 +541,14 @@ public class Hero : Photon.MonoBehaviour {
 			photonView.RPC("SwitchShade", PhotonTargets.OthersBuffered);
 
 		//sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
+	}
+	protected virtual void Damage(int damageAmount)
+	{
+		//only damage the hero if they arent blocking or arent invisible
+		if (depleteOnHit && !isBlocking || !depleteOnHit && !isInvinsible || !isDamaged)
+		{
+			isDamaged = true;
+			stats.currentHealth -= damageAmount;
+		}
 	}
 }

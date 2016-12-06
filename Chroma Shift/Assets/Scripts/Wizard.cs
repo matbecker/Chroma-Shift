@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class Wizard : Hero {
 
@@ -16,10 +17,14 @@ public class Wizard : Hero {
 	private float startLerpTimer;
 	private float endLerpTimer;
 	private bool freezeBlock;
+	public static List<GameObject> deadProjectileList;
+
 
 	protected override void Start ()
 	{
 		base.Start ();
+
+		deadProjectileList = new List<GameObject>();
 
 		if(photonView.isMine)
 		{
@@ -30,6 +35,7 @@ public class Wizard : Hero {
 		shield.GetComponent<SpriteRenderer>().color = Color.clear;
 		halfTransparency = new Color(1,1,1,0.5f);
 		freezeBlock = false;
+
 	}
 
 	protected override void OnDestroy ()
@@ -64,6 +70,9 @@ public class Wizard : Hero {
 		}
 		if (isChargingShot)
 		{
+			if (!tmpProjectile)
+				return;
+			
 			chargingShotTimer += Time.deltaTime;
 
 			//if the attackbutton has been held for under 1 second
@@ -126,6 +135,11 @@ public class Wizard : Hero {
 			endLerpTimer += Time.deltaTime / lerpDuration;
 		}
 
+		foreach (GameObject p in deadProjectileList)
+		{
+			Destroy(p);
+		}
+
 	}
 
 	protected override void Attack ()
@@ -157,7 +171,6 @@ public class Wizard : Hero {
 		tmpProjectile.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezePositionY;
 		//wizard is now charging their shot
 		isChargingShot = true;
-
 	}
 	//method for shooting the wizards projectile
 	[PunRPC] void ShootChargeShot(Vector2 velocity)
@@ -194,7 +207,13 @@ public class Wizard : Hero {
 		}
 		freezeBlock = true;
 	}
-		
+	protected override void OnCollisionEnter2D (Collision2D other)
+	{
+		base.OnCollisionEnter2D (other);
+
+
+		//if (tmpProjectile.GetComponent<BoxCollider2D>().IsTouching(other))
+	}
 	protected override void OnCollisionStay2D (Collision2D other)
 	{
 		base.OnCollisionStay2D (other);

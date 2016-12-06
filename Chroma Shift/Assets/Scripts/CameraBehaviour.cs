@@ -8,10 +8,11 @@ public class CameraBehaviour : MonoBehaviour {
 	[SerializeField] GameObject hero;
 	[SerializeField] Vector2 minPos;
 	[SerializeField] Vector2 maxPos;
+	private bool isInit;
 	// Use this for initialization
 	void Start () 
 	{
-		hero = GameObject.FindGameObjectWithTag("Player");
+		isInit = true;
 	}
 	void Awake()
 	{
@@ -21,7 +22,11 @@ public class CameraBehaviour : MonoBehaviour {
 	// Update is called once per frame
 	void Update () 
 	{
-		
+		if (isInit)
+		{
+			hero = GameObject.FindGameObjectWithTag("Player");
+			isInit = false;
+		}
 		
 		//if (hero.GetComponent<Hero>().isFollowTarget)
 		//{

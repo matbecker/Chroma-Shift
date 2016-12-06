@@ -16,6 +16,7 @@ public class ColourWheel : MonoBehaviour {
 			return instance;
 		}
 	}
+
 	[SerializeField] List<Material> colourWheelFaceColours;
 	[SerializeField] int faceIndex;
 	[SerializeField] int randDirection;
@@ -23,14 +24,16 @@ public class ColourWheel : MonoBehaviour {
 	[SerializeField] float spinTime;
 	[SerializeField] int rotationAngle;
 	private float timer;
-	private bool startSpinning;
-	private Char delimiter = '_';
+	public bool startSpinning;
+	private char delimiter = '_';
+	private string[] colors;
 
 	// Use this for initialization
 	void Start () 
 	{
 		startSpinning = false;
 
+		colors = new string[2];
 	}
 	
 	// Update is called once per frame
@@ -52,12 +55,14 @@ public class ColourWheel : MonoBehaviour {
 		if (!startSpinning)
 			Shift();
 
-		if (rotationAngle % 30 == 0)
+		if ((int)rotationAngle % 30 == 0)
+		{
 			faceIndex++;
 
-		if (faceIndex > colourWheelFaceColours.Count)
-			faceIndex = 0;
+			if (faceIndex >= colourWheelFaceColours.Count)
+				faceIndex = 0;
 
+<<<<<<< HEAD
 		Debug.Log(faceIndex);
 
 //		foreach (string colourString in colourWheelFaceColours[faceIndex].name)
@@ -65,6 +70,14 @@ public class ColourWheel : MonoBehaviour {
 //			string[] split = colourString.Split(delimiter);
 //			colourString.Split(delimiter, 2);
 //		}
+=======
+			if (faceIndex < 0)
+				faceIndex = 12;
+		}
+
+		//Debug.Log(colors[0]);
+
+>>>>>>> Enemies
 			
 	}
 	void Spin()
@@ -74,19 +87,20 @@ public class ColourWheel : MonoBehaviour {
 			gameObject.transform.Rotate(Vector3.right * (rotationSpeed * Time.deltaTime));
 		else //spin left
 			gameObject.transform.Rotate(Vector3.left * (rotationSpeed * Time.deltaTime));
+
+		colors = colourWheelFaceColours[faceIndex].name.Split('_'); 
 	}
 	void SlowDown()
 	{
 		//rotationSpeed -= 0.1f;
 
-		if (rotationAngle % 30 == 0)
+		if ((int)rotationAngle % 30 == 0)
 			StopSpinning();
 	}
 	void StopSpinning()
 	{
 		//reset variables
 		rotationSpeed = 0;
-		//startSpinning = false;
 		timer = 0.0f;
 	}
 	void Shift()
