@@ -62,7 +62,6 @@ public class ColourWheel : MonoBehaviour {
 			if (faceIndex >= colourWheelFaceColours.Count)
 				faceIndex = 0;
 
-<<<<<<< HEAD
 		Debug.Log(faceIndex);
 
 //		foreach (string colourString in colourWheelFaceColours[faceIndex].name)
@@ -70,14 +69,14 @@ public class ColourWheel : MonoBehaviour {
 //			string[] split = colourString.Split(delimiter);
 //			colourString.Split(delimiter, 2);
 //		}
-=======
+
 			if (faceIndex < 0)
 				faceIndex = 12;
 		}
 
 		//Debug.Log(colors[0]);
 
->>>>>>> Enemies
+
 			
 	}
 	void Spin()
