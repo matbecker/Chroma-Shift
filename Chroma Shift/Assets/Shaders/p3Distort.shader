@@ -41,7 +41,7 @@
 
 			fixed4 frag (v2f IN) : SV_Target
 			{
-				fixed4 col = tex2D(_MainTex, IN.uv + float2(0, sin(IN.vertex.y/50 + _Time[1]) /50));
+				fixed4 col = tex2D(_MainTex, IN.uv + float2(0, sin(IN.vertex.y/25 + _Time[1]) /6));
 				// just invert the colors
 				//col = 1 - col;
 				return col;
