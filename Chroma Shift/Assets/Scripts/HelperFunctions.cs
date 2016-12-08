@@ -50,6 +50,13 @@ public static class HelperFunctions {
 	{
 		return Physics2D.OverlapCircle(col.bounds.center, 0.1f, collidableLayers);
 	}
+	public static bool WallCheck(BoxCollider2D col, Transform transform, bool left)
+	{
+		if (left)
+			return Physics2D.OverlapCircle(new Vector2(transform.position.x - col.bounds.extents.x, transform.position.y + col.bounds.extents.y), 0.1f, collidableLayers);
+		else
+			return Physics2D.OverlapCircle(new Vector2(transform.position.x + col.bounds.extents.x, transform.position.y + col.bounds.extents.y), 0.1f, collidableLayers);
+	}
 
 	public static Color ColorLerp(Color currentColor, Color desiredColor, float duration)
 	{

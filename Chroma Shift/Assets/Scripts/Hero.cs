@@ -85,6 +85,7 @@ public class Hero : Photon.MonoBehaviour {
 			InputManager.Instance.SwitchColour += SwitchColour;
 			InputManager.Instance.SwitchShade += SwitchShade;
 		}
+		isDamaged = true;
 		//get the rigidbody of the gameobject
 		rb = gameObject.GetComponent<Rigidbody2D>();
 		//get the edge collider of the gameobject
@@ -466,8 +467,13 @@ public class Hero : Photon.MonoBehaviour {
 			//change the camera target
 			UpdateCameraTarget();
 		}
-		//clear the current enemy wave
-		EnemySpawner.enemyWave.Clear();
+
+		EnemySpawner.ClearEnemies();
+
+		if (LevelManager.Instance.levelCompletionTimer < 0)
+			LevelManager.Instance.levelCompletionTimer = 100.0f;
+
+		PlayerUI.Instance.SetLifeText();
 
 //		if (stats.lives <= 0)
 //		{
@@ -490,6 +496,8 @@ public class Hero : Photon.MonoBehaviour {
 			stats.colourShifts++;
 			Destroy(other.gameObject);
 		}
+			
+
 	}
 	protected virtual void OnCollisionStay2D(Collision2D other)
 	{

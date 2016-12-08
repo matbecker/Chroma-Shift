@@ -32,17 +32,27 @@ public class RotatingImage : MonoBehaviour {
 		{
 			image.rectTransform.Rotate(Vector3.up * (rotationSpeed * Time.deltaTime));
 
-			if ((int)image.rectTransform.localRotation.eulerAngles.y % 180 == 0)
+			Vector3 euler = image.rectTransform.localRotation.eulerAngles;
+
+			if (euler.y > 180)
+			{
+				euler.y -= 180;
+				image.rectTransform.localRotation = Quaternion.Euler(euler);
 				image.color = new Color(Random.value, Random.value, Random.value, 1.0f);
+			}
 		}
 		else
 		{
 			sprite.transform.Rotate(Vector3.up * (rotationSpeed * Time.deltaTime));
 
-			if ((int)sprite.transform.localRotation.eulerAngles.y % 180 == 0)
+			Vector3 euler = sprite.transform.localRotation.eulerAngles;
+
+			if (euler.y > 180)
+			{
+				euler.y -= 180;
+				sprite.transform.localRotation = Quaternion.Euler(euler);
 				sprite.GetComponent<SpriteRenderer>().color = new Color(Random.value, Random.value, Random.value, 1.0f);
+			}
 		}
-			
-	
 	}
 }

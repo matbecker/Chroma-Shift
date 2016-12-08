@@ -4,13 +4,26 @@ using UnityEngine.UI;
 
 public class PlayerUI : Photon.MonoBehaviour {
 
+	private static PlayerUI instance;
+	public static PlayerUI Instance
+	{
+		get
+		{
+			if (!instance) 
+				instance = GameObject.FindObjectOfType (typeof(PlayerUI)) as PlayerUI;
+
+			return instance;
+		}
+
+	}
+
 	[SerializeField] Hero hero;
 	[SerializeField] Image healthBar;
 	[SerializeField] Sprite[] heroImages;
 	[SerializeField] GameObject[] colourShifts;
 	[SerializeField] Image heroImage;
-	[SerializeField] Text liveTextTop;
-	[SerializeField] Text liveTextBottom;
+	[SerializeField] Text lifeTextTop;
+	[SerializeField] Text lifeTextBottom;
 	//[SerializeField] Hero.Type heroType;
 	private float currentHealth;
 	private float prevHealth;
@@ -51,9 +64,6 @@ public class PlayerUI : Photon.MonoBehaviour {
 		{
 			colourShifts[i].SetActive(false);
 		}
-
-
-
 	}
 	void OnDestroy()
 	{
@@ -79,8 +89,7 @@ public class PlayerUI : Photon.MonoBehaviour {
 			InputManager.Instance.SwitchColour += SwitchHealthBarColour;
 			InputManager.Instance.SwitchShade += SwitchHealthBarShade;
 
-			liveTextBottom.text = "x  " + hero.stats.lives.ToString();;
-			liveTextTop.text = "x  " + hero.stats.lives.ToString();
+			SetLifeText();
 
 			for (int i = 0; i < hero.stats.colourShifts; i++)
 			{
@@ -137,5 +146,10 @@ public class PlayerUI : Photon.MonoBehaviour {
 		//if (photonView.isMine || PhotonNetwork.offlineMode)
 		//if (hero.stats.colourShifts != 0)
 		healthBar.color = hero.GetComponent<SpriteRenderer>().color;
+	}
+	public void SetLifeText()
+	{
+		lifeTextBottom.text = "x  " + hero.stats.lives.ToString();;
+		lifeTextTop.text = "x  " + hero.stats.lives.ToString();
 	}
 }

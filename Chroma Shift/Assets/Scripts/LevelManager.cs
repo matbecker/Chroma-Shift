@@ -16,7 +16,8 @@ public class LevelManager : Photon.MonoBehaviour {
 	public int levelBottom;
 	private bool isInit;
 	private int slowAnimCounter;
-	private bool shrink;
+	private bool shrinkText;
+	public float levelCompletionTimer;
 
 	private static LevelManager instance;
 	public static LevelManager Instance
@@ -31,7 +32,7 @@ public class LevelManager : Photon.MonoBehaviour {
 	}
 
 
-	public float levelCompletionTimer;
+
 
 	private void Awake()
 	{
@@ -85,15 +86,15 @@ public class LevelManager : Photon.MonoBehaviour {
 
 		levelCompletionTimer -= Time.deltaTime;
 
-		if (slowAnimCounter >= 5)
+		if (slowAnimCounter >= 3)
 		{
 			if (levelTimerBottom.fontSize >= 40 && levelTimerTop.fontSize >= 40)
-				shrink = true;
+				shrinkText = true;
 
 			if (levelTimerBottom.fontSize <= 20 && levelTimerTop.fontSize <= 20)
-				shrink = false;
+				shrinkText = false;
 			
-			if (shrink)
+			if (shrinkText)
 			{
 				levelTimerBottom.fontSize--;
 				levelTimerTop.fontSize--;

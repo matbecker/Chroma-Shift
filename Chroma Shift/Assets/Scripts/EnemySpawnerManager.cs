@@ -9,7 +9,6 @@ public class EnemySpawnerManager : MonoBehaviour {
 	void Start () 
 	{
 		spawners = new List<GameObject>();
-	
 	}
 	
 	// Update is called once per frame

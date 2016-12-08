@@ -3,8 +3,12 @@ using System.Collections;
 
 public class Bouncer : Enemy {
 
-	[SerializeField] Vector2 jumpForce;
+	[SerializeField] Vector2 verticalForce;
+	[SerializeField] Vector2 horizontalForce;
+	[SerializeField] Vector2 velocity;
+	[SerializeField] Vector2 maxVelocity;
 	[SerializeField] EdgeCollider2D edgeCol;
+
 	public bool grounded;
 	private float airTimer;
 
@@ -19,15 +23,21 @@ public class Bouncer : Enemy {
 		stats.movementSpeed = Random.Range(1,3);
 	}
 	// Use this for initialization
-	void Start () 
+	protected override void Start () 
 	{
-		SetSize(false);
+		base.Start();
+
+		type = EnemyType.Bouncer;
+
+		SetSize();
 	}
-	
-	// Update is called once per frame
-	protected override void Update () 
+	protected override void Update ()
 	{
 		base.Update();
+	}
+	// Update is called once per frame
+	protected override void FixedUpdate () 
+	{
 		Move();
 
 		if (grounded)
@@ -35,31 +45,28 @@ public class Bouncer : Enemy {
 			rb.gravityScale = 1.0f;
 			Jump();	
 		}
-		else
-		{
-			airTimer += Time.deltaTime;
 
-			if (airTimer > 3.0f)
-			{
-				rb.gravityScale = 10.0f;
-				airTimer = 0.0f;
-			}
-		}
-			
+		if (velocity.x > maxVelocity.x)
+			velocity.x = maxVelocity.x;
+
+		if (velocity.y > maxVelocity.y)
+			velocity.y = maxVelocity.y;
+
+		velocity = rb.velocity;
 	}
 		
 	
 	private void OnCollisionEnter2D(Collision2D other)
 	{
-		
 		if (HelperFunctions.GroundCheck(edgeCol) && transform.position.y > other.transform.position.y)
 			grounded = true;
+
+		if (HelperFunctions.WallCheck(col, transform, true))
+			rb.AddForce(horizontalForce);
 		
-		//if the hero touches me
-		if (other.collider.CompareTag("Player") && transform.position.y < other.transform.position.y)
-		{
-			other.gameObject.SendMessage("Damage", 1, SendMessageOptions.DontRequireReceiver);
-		}
+		if (HelperFunctions.WallCheck(col, transform, false))
+			rb.AddForce(-horizontalForce);
+
 		//if I land on top of the hero
 		if (other.collider.CompareTag("Player") && transform.position.y > other.transform.position.y)
 		{
@@ -72,7 +79,7 @@ public class Bouncer : Enemy {
 	}
 	private void Jump()
 	{
-		rb.AddForce(jumpForce);
+		rb.AddForce(verticalForce);
 	}
 	protected override void Move ()
 	{

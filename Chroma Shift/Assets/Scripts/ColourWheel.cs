@@ -5,6 +5,10 @@ using System.Collections.Generic;
 
 public class ColourWheel : MonoBehaviour {
 
+	public enum ColourType { Purple, Blue, Green, Yellow, Orange, Red };
+	public ColourType currentColourTop;
+	public ColourType currentColourBottom;
+
 	private static ColourWheel instance;
 	public static ColourWheel Instance
 	{
@@ -25,7 +29,6 @@ public class ColourWheel : MonoBehaviour {
 	[SerializeField] int rotationAngle;
 	private float timer;
 	public bool startSpinning;
-	private char delimiter = '_';
 	private string[] colors;
 
 	// Use this for initialization
@@ -39,45 +42,21 @@ public class ColourWheel : MonoBehaviour {
 	// Update is called once per frame
 	void Update () 
 	{
-		rotationAngle = (int)transform.localEulerAngles.x;
+		rotationAngle = Mathf.RoundToInt(transform.localEulerAngles.x);
 
 		if (startSpinning)
 		{
-			Spin();
-
 			timer += Time.deltaTime;
 
 			if (timer >= spinTime)
 			{
 				SlowDown();
 			}
+
+			Spin();
 		}
 		if (!startSpinning)
 			Shift();
-
-		if ((int)rotationAngle % 30 == 0)
-		{
-			faceIndex++;
-
-			if (faceIndex >= colourWheelFaceColours.Count)
-				faceIndex = 0;
-
-		Debug.Log(faceIndex);
-
-//		foreach (string colourString in colourWheelFaceColours[faceIndex].name)
-//		{
-//			string[] split = colourString.Split(delimiter);
-//			colourString.Split(delimiter, 2);
-//		}
-
-			if (faceIndex < 0)
-				faceIndex = 12;
-		}
-
-		//Debug.Log(colors[0]);
-
-
-			
 	}
 	void Spin()
 	{
@@ -87,22 +66,33 @@ public class ColourWheel : MonoBehaviour {
 		else //spin left
 			gameObject.transform.Rotate(Vector3.left * (rotationSpeed * Time.deltaTime));
 
-		colors = colourWheelFaceColours[faceIndex].name.Split('_'); 
+		rotationAngle = Mathf.RoundToInt(transform.localEulerAngles.x);
 	}
 	void SlowDown()
 	{
 		//rotationSpeed -= 0.1f;
 
-		if ((int)rotationAngle % 30 == 0)
+		if (rotationAngle % 30 == 0)
 			StopSpinning();
 	}
 	void StopSpinning()
 	{
+		var angle = (rotationAngle + 360) % 360;
+		faceIndex = (int)(angle / 30f);
+
+		colors = colourWheelFaceColours[faceIndex].name.Split('_');
+
+		currentColourTop = ParseColour(colors[0]);
+		currentColourBottom = ParseColour(colors[1]);
+
+		Debug.Log(currentColourTop.ToString());
+		Debug.Log(currentColourBottom.ToString());
+
 		//reset variables
 		rotationSpeed = 0;
 		timer = 0.0f;
 	}
-	void Shift()
+	public void Shift()
 	{
 		//coin flip to determine if the wheel should spin right or left
 		randDirection = UnityEngine.Random.Range(0,2);
@@ -113,5 +103,9 @@ public class ColourWheel : MonoBehaviour {
 		//start spinning the wheel
 		startSpinning = true;
 
+	}
+	private ColourType ParseColour(string colour)
+	{
+		return (ColourType)Enum.Parse(typeof(ColourType), colour);
 	}
 }
