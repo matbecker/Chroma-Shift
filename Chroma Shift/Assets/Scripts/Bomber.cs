@@ -14,18 +14,23 @@ public class Bomber : Enemy {
 		stats.movementSpeed = Random.Range(5,7);
 	}
 	// Use this for initialization
-	void Start () 
+	protected override void Start () 
 	{
-		SetSize(false);
+		base.Start();
+
+		type = EnemyType.Bomber;
+
+		SetSize();
 	}
-	
-	// Update is called once per frame
-	protected override void Update () 
+	protected override void Update()
 	{
-		base.Update();
+		base.Update ();
+	}	
+	protected override void FixedUpdate()
+	{
 		Move();
 	}
-	protected override void Move ()
+	protected override void Move()
 	{
 		base.Move();
 	}

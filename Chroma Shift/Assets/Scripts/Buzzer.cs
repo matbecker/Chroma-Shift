@@ -19,17 +19,22 @@ public class Buzzer : Enemy {
 		stats.movementSpeed = Random.Range(2,4);
 	}
 	// Use this for initialization
-	void Start () 
+	protected override void Start () 
 	{
-		SetSize(true);
+		base.Start();
+
+		type = EnemyType.Buzzer;
+
+		SetSize();
+
 		state = State.Move;
 	}
-	
-
-	protected override void Update () 
+	protected override void Update ()
 	{
-		base.Update();
-
+		base.Update ();
+	}
+	protected override void FixedUpdate ()
+	{
 		switch (state)
 		{
 		case State.Move:
@@ -44,7 +49,6 @@ public class Buzzer : Enemy {
 		default:
 			break;
 		}
-			
 	}
 	protected override void Move ()
 	{

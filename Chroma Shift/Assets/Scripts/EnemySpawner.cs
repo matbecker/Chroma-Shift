@@ -19,11 +19,13 @@ public class EnemySpawner : MonoBehaviour {
 	[SerializeField] Text enemyWaveCountTopText;
 	[SerializeField] int spawnCircleWidth;
 	[SerializeField] int spawnCircleHeight;
+	[SerializeField] GameObject[] enemyTypes;
 
 	// Use this for initialization
 	void Start () 
 	{
 		hasWaveStarted = false;
+
 		enemyWave = new List<GameObject>();
 
 		for (int i = 0; i < barriers.Length; i++)
@@ -40,7 +42,6 @@ public class EnemySpawner : MonoBehaviour {
 	{
 		if (other.CompareTag("Player") && !hasWaveStarted)
 		{
-
 			for (int i = 0; i < barriers.Length; i++)
 			{
 				barriers[i].GetComponent<BoxCollider2D>().enabled = true;
@@ -52,10 +53,10 @@ public class EnemySpawner : MonoBehaviour {
 			//loop through as many times as the enemy count returned
 			for (int i = 0; i <= enemyCount; i++)
 			{
-				int enemyType = Random.Range(0,3);
+				int enemyType = Random.Range(0,enemyTypes.Length);
 
 				//instantiate a random enemy type at the enemyspawner location
-				GameObject enemyObj = Instantiate(EnemyManager.Instance.enemyTypes[enemyType], transform.position + new Vector3(Random.insideUnitCircle.x * spawnCircleWidth, Random.insideUnitCircle.y * spawnCircleHeight, transform.position.z), Quaternion.identity) as GameObject;
+				GameObject enemyObj = Instantiate(enemyTypes[enemyType], transform.position + new Vector3(Random.insideUnitCircle.x * spawnCircleWidth, Random.insideUnitCircle.y * spawnCircleHeight, transform.position.z), Quaternion.identity) as GameObject;
 				//add the enemy to the wave list
 				enemyWave.Add(enemyObj);
 			}
@@ -92,10 +93,22 @@ public class EnemySpawner : MonoBehaviour {
 			endLerpTimer += Time.deltaTime / lerpDuration;
 
 			if (endLerpTimer > lerpDuration)
+			{
+				float rand = Random.value;
+
+				if (rand > 0.5f)
+					ColourWheel.Instance.Shift();
+
 				gameObject.SetActive(false);
-				//return;
-
-
+			}
 		}
+	}
+	public static void ClearEnemies()
+	{
+		foreach (GameObject enemy in enemyWave)
+		{
+			Destroy(enemy);
+		}
+		enemyWave.Clear();
 	}
 }

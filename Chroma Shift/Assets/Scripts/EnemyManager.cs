@@ -1,10 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class EnemyManager : MonoBehaviour {
-
-	public enum EnemyType { Bouncer, Kamikazer, Buzzer };
-	public EnemyType type;
 
 	private static EnemyManager instance;
 	public static EnemyManager Instance
@@ -17,16 +15,19 @@ public class EnemyManager : MonoBehaviour {
 			return instance;
 		}
 	}
-	public GameObject[] enemyTypes;
+
+	public GameObject[] enemyPrefab;
 	public int enemyCount;
 
 	// Use this for initialization
-	void Start () {
-	
+	void Start () 
+	{
+		
 	}
 	
 	// Update is called once per frame
-	void Update () {
-	
+	void Update () 
+	{
+		
 	}
 }
