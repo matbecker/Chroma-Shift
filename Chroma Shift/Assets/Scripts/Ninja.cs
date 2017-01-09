@@ -96,16 +96,16 @@ public class Ninja : Hero {
 		}
 		freezeBlock = true;
 	}
-	protected override void OnCollisionExit2D (Collision2D other)
+	private void OnCollisionExit2D (Collision2D other)
 	{
-		base.OnCollisionExit2D (other);
 		//if the player has left the ground layer they can double jump
-		canDoubleJump = true;
+		if (!grounded)
+			canDoubleJump = true;
 	}
-	protected override void OnCollisionStay2D(Collision2D other)
+	protected override void OnCollisionEnter2D (Collision2D other)
 	{
-		base.OnCollisionStay2D(other);
-		//if the player is on the ground layer they cannot double jump
+		base.OnCollisionEnter2D(other);
+
 		canDoubleJump = false;
 	}
 	private void DoubleJump()

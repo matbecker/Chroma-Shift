@@ -38,10 +38,10 @@ public class Hero : Photon.MonoBehaviour {
 	[SerializeField] protected Animator anim;
 	[SerializeField] protected bool depleteOnHit;
 	[SerializeField] protected bool rangedAttack;
-	private bool grounded;
 	protected bool startShieldTimer;
 	protected bool canBlock;
 	protected bool isBlocking;
+	protected bool grounded;
 	private bool canAttack;
 	public bool isAttacking;
 	private bool rechargeShield;
@@ -277,6 +277,8 @@ public class Hero : Photon.MonoBehaviour {
 		//make the x scale of the shield bar image equal the heros current shield strength / their max shield strength (value between 0-1)
 		shieldBar.rectTransform.localScale = new Vector2(stats.currentShieldStrength / stats.shieldCapacity, 1.0f);
 
+		if (rb.velocity.y > stats.maxVelocity.y)
+			rb.velocity = new Vector2(rb.velocity.x, stats.maxVelocity.y);
 
 		if (transform.position.y < LevelManager.Instance.levelBottom || stats.currentHealth <= 0 || LevelManager.Instance.levelCompletionTimer <= 0)
 			Death();
@@ -311,6 +313,8 @@ public class Hero : Photon.MonoBehaviour {
 				//if the player is on the ground layer then apply a force in the y direction
 				if (HelperFunctions.GroundCheck(edgeCol))
 					rb.AddForce(stats.jumpForce);
+
+				grounded = false;
 
 				if (rb.velocity.y > stats.maxVelocity.y)
 					rb.velocity = new Vector2(rb.velocity.x, stats.maxVelocity.y);
@@ -496,24 +500,11 @@ public class Hero : Photon.MonoBehaviour {
 			stats.colourShifts++;
 			Destroy(other.gameObject);
 		}
-			
-
-	}
-	protected virtual void OnCollisionStay2D(Collision2D other)
-	{
-		if (((1 << other.gameObject.layer) & HelperFunctions.collidableLayers) != 0)
-		{
+		if (HelperFunctions.GroundCheck(edgeCol))
 			grounded = true;
-		}
+
 	}
 
-	protected virtual void OnCollisionExit2D(Collision2D other)
-	{
-		if (((1 << other.gameObject.layer) & HelperFunctions.collidableLayers) != 0)
-		{
-			grounded = false;
-		}
-	}
 	//method for switching the players colour
 	[PunRPC] public void SwitchColour()
 	{

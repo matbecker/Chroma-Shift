@@ -17,14 +17,12 @@ public class Wizard : Hero {
 	private float startLerpTimer;
 	private float endLerpTimer;
 	private bool freezeBlock;
-	public static List<GameObject> deadProjectileList;
+	private Vector3 rotation;
 
 
 	protected override void Start ()
 	{
 		base.Start ();
-
-		deadProjectileList = new List<GameObject>();
 
 		if(photonView.isMine)
 		{
@@ -59,14 +57,14 @@ public class Wizard : Hero {
 		//if the player is hovering start timing their hover
 		if (isHovering)
 			hoverTimer += Time.deltaTime;
+		else
+			hoverTimer = 0.0f;
 
 		//if the timer reaches the hover duration
 		if (hoverTimer >= desiredHoverDuration)
 		{
 			//call the StopHovering method
 			StopHovering();
-			//reset the timer
-			hoverTimer = 0.0f;
 		}
 		if (isChargingShot)
 		{
@@ -134,12 +132,7 @@ public class Wizard : Hero {
 
 			endLerpTimer += Time.deltaTime / lerpDuration;
 		}
-
-		foreach (GameObject p in deadProjectileList)
-		{
-			Destroy(p);
-		}
-
+		rotation = transform.rotation.eulerAngles;
 	}
 
 	protected override void Attack ()
@@ -211,27 +204,17 @@ public class Wizard : Hero {
 	{
 		base.OnCollisionEnter2D (other);
 
-
-		//if (tmpProjectile.GetComponent<BoxCollider2D>().IsTouching(other))
-	}
-	protected override void OnCollisionStay2D (Collision2D other)
-	{
-		base.OnCollisionStay2D (other);
-
-		if(photonView.isMine)
+		if (HelperFunctions.GroundCheck(edgeCol))
 		{
-			//player is on the ground and is not hovering
 			isHovering = false;
 			canHover = false;
 		}
 	}
 
-	protected override void OnCollisionExit2D (Collision2D other)
+	private void OnCollisionExit2D (Collision2D other)
 	{
-		base.OnCollisionExit2D (other);
-
 		//player is off the ground and can hover if they wish
-		if(photonView.isMine)
+		if(!grounded && photonView.isMine)
 			canHover = true;
 	}
 
@@ -239,17 +222,23 @@ public class Wizard : Hero {
 	{
 		//if the player can hover freeze their y position so they begin hovering
 		if (canHover)
-			rb.constraints = RigidbodyConstraints2D.FreezePositionY;
+		{
+			rb.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
+
+			//player is now hovering 
+			isHovering = true;
+		}
+			
 		
-		//player is now hovering 
-		isHovering = true;
+
 	}
 
 	private void StopHovering()
 	{
 		//unfreeze the players position
-		rb.constraints = ~RigidbodyConstraints2D.FreezePositionY & 
-						 ~RigidbodyConstraints2D.FreezePositionX;
+		rb.constraints = RigidbodyConstraints2D.None;
+		rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+
 		//player is no longer hovering
 		isHovering = false;
 		//and cannot hover again

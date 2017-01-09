@@ -48,7 +48,7 @@ public static class HelperFunctions {
 
 	public static bool GroundCheck(EdgeCollider2D col)
 	{
-		return Physics2D.OverlapCircle(col.bounds.center, 0.1f, collidableLayers);
+		return Physics2D.OverlapCircle(col.bounds.center - col.bounds.extents, 0.1f, collidableLayers);
 	}
 	public static bool WallCheck(BoxCollider2D col, Transform transform, bool left)
 	{

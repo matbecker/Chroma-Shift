@@ -27,43 +27,19 @@ public class PlayerUI : Photon.MonoBehaviour {
 	//[SerializeField] Hero.Type heroType;
 	private float currentHealth;
 	private float prevHealth;
+	private bool isInit;
 
 	// Use this for initialization
 	void Start () 
 	{
 		
-		hero = GameObject.FindGameObjectWithTag("Player").GetComponent<Hero>();
-
-		switch (hero.type)
-		{
-		case Hero.Type.Archer:
-			heroImage.sprite = heroImages[(int)hero.type];
-			heroImage.rectTransform.localPosition = new Vector2(-378.0f, 164.0f);
-			heroImage.rectTransform.sizeDelta = new Vector2(15.0f, 15.0f);
-			break;
-		case Hero.Type.Ninja:
-			heroImage.sprite = heroImages[(int)hero.type];
-			heroImage.rectTransform.localPosition = new Vector2(-378.0f, 162.0f);
-			heroImage.rectTransform.sizeDelta = new Vector2(20.0f, 10.0f);
-			break;
-		case Hero.Type.Swordsmen:
-			heroImage.sprite = heroImages[(int)hero.type];
-			heroImage.rectTransform.localPosition = new Vector2(-378.0f, 161.0f);
-			heroImage.rectTransform.sizeDelta = new Vector2(20.0f, 10.0f);
-			break;
-		case Hero.Type.Wizard:
-			heroImage.sprite = heroImages[(int)hero.type];
-			heroImage.rectTransform.localPosition = new Vector2(-378.0f, 162.0f);
-			heroImage.rectTransform.sizeDelta = new Vector2(20.0f, 10.0f);
-			break;
-		default:
-			break;
-		}
 
 		for (int i = 0; i < colourShifts.Length; i++)
 		{
 			colourShifts[i].SetActive(false);
 		}
+
+		isInit = true;
 	}
 	void OnDestroy()
 	{
@@ -82,8 +58,37 @@ public class PlayerUI : Photon.MonoBehaviour {
 	// Update is called once per frame
 	void Update () 
 	{
+		if (isInit)
+			hero = GameObject.FindGameObjectWithTag("Player").GetComponent<Hero>();
+			
 		if (hero.isInit)
 		{
+			switch (hero.type)
+			{
+			case Hero.Type.Archer:
+				heroImage.sprite = heroImages[(int)hero.type];
+				heroImage.rectTransform.localPosition = new Vector2(-468.0f, 214.0f);
+				heroImage.rectTransform.sizeDelta = new Vector2(15.0f, 15.0f);
+				break;
+			case Hero.Type.Ninja:
+				heroImage.sprite = heroImages[(int)hero.type];
+				heroImage.rectTransform.localPosition = new Vector2(-470.0f, 208.0f);
+				heroImage.rectTransform.sizeDelta = new Vector2(20.0f, 10.0f);
+				break;
+			case Hero.Type.Swordsmen:
+				heroImage.sprite = heroImages[(int)hero.type];
+				heroImage.rectTransform.localPosition = new Vector2(-470.0f, 208.0f);
+				heroImage.rectTransform.sizeDelta = new Vector2(20.0f, 10.0f);
+				break;
+			case Hero.Type.Wizard:
+				heroImage.sprite = heroImages[(int)hero.type];
+				heroImage.rectTransform.localPosition = new Vector2(-468.0f, 208.0f);
+				heroImage.rectTransform.sizeDelta = new Vector2(20.0f, 10.0f);
+				break;
+			default:
+				break;
+			}
+
 			healthBar.color = hero.GetComponent<SpriteRenderer>().color;
 
 			InputManager.Instance.SwitchColour += SwitchHealthBarColour;
@@ -97,6 +102,7 @@ public class PlayerUI : Photon.MonoBehaviour {
 			}
 
 			hero.isInit = false;
+			isInit = false;
 		}
 		 
 		switch (hero.stats.colourShifts)

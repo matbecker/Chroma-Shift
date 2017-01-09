@@ -22,6 +22,8 @@ public class Projectile : MonoBehaviour {
 	// Update is called once per frame
 	void Update () 
 	{
+		if (alive)
+			hero = GameObject.FindGameObjectWithTag("Player");
 	}
 	void OnTriggerEnter2D(Collider2D other)
 	{
@@ -34,12 +36,13 @@ public class Projectile : MonoBehaviour {
 				Destroy(gameObject);
 				break;
 			case ProjectileType.Magic:
-				other.SendMessage("Damage", 3, SendMessageOptions.DontRequireReceiver);
-				Wizard.deadProjectileList.Add(gameObject);
+				other.SendMessage("Damage", hero.GetComponent<Hero>().stats.attackPower, SendMessageOptions.DontRequireReceiver);
+				Destroy(gameObject);
 				break;
 			default:
 				break;
 			}
+			Debug.Log(hero.GetComponent<Hero>().stats.attackPower);
 		}
 		if (((1 << other.gameObject.layer) & HelperFunctions.collidableLayers) != 0)
 		{
