@@ -27,11 +27,11 @@ public class Hero : Photon.MonoBehaviour {
 	}
 	public Stats stats;
 	public Type type;
+	public ColourManager colour;
 	[SerializeField] protected Rigidbody2D rb;
 	[SerializeField] protected EdgeCollider2D edgeCol;
 	[SerializeField] protected BoxCollider2D boxCol;
 	[SerializeField] protected Image shieldBar;
-	[SerializeField] protected ColourManager colour;
 	[SerializeField] protected SpriteRenderer sprite;
 	[SerializeField] protected GameObject projectile;
 	[SerializeField] protected GameObject tmpProjectile;
@@ -50,7 +50,6 @@ public class Hero : Photon.MonoBehaviour {
 	protected bool isInvinsible;
 	protected bool isDamaged;
 	public bool isFollowTarget;
-	public bool isInit;
 	private float timer;
 	private float CooldownTimer;
 	private Coroutine transparencyCor;
@@ -127,7 +126,6 @@ public class Hero : Photon.MonoBehaviour {
 		//isFollowTarget = true;
 
 		SetupSprite();
-		isInit = true;
 	}
 
 	public void SetupSprite()
@@ -280,7 +278,7 @@ public class Hero : Photon.MonoBehaviour {
 		if (rb.velocity.y > stats.maxVelocity.y)
 			rb.velocity = new Vector2(rb.velocity.x, stats.maxVelocity.y);
 
-		if (transform.position.y < LevelManager.Instance.levelBottom || stats.currentHealth <= 0 || LevelManager.Instance.levelCompletionTimer <= 0)
+		if (transform.position.y < LevelManager.levelBottom || stats.currentHealth <= 0)
 			Death();
 	}
 	private void CheckShieldFull()
@@ -464,7 +462,7 @@ public class Hero : Photon.MonoBehaviour {
 
 		stats.currentHealth = stats.maxHealth;
 
-		transform.position = LevelManager.Instance.currentSpawnPoint.position;
+		transform.position = LevelManager.Instance.currentSpawnPoint.transform.position;
 		//if a hero has no lives and there are more than one hero
 		if (stats.lives == 0 && HeroManager.Instance.heroes.Length > 1)
 		{
@@ -473,9 +471,6 @@ public class Hero : Photon.MonoBehaviour {
 		}
 
 		EnemySpawner.ClearEnemies();
-
-		if (LevelManager.Instance.levelCompletionTimer < 0)
-			LevelManager.Instance.levelCompletionTimer = 100.0f;
 
 		PlayerUI.Instance.SetLifeText();
 

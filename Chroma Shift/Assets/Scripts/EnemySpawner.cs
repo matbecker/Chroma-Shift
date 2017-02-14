@@ -2,8 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using System.Linq;
 
-public class EnemySpawner : MonoBehaviour {
+public class EnemySpawner : LevelObject {
 
 	[SerializeField] int minEnemies;
 	[SerializeField] int maxEnemies;
@@ -19,9 +20,15 @@ public class EnemySpawner : MonoBehaviour {
 	[SerializeField] Text enemyWaveCountTopText;
 	[SerializeField] int spawnCircleWidth;
 	[SerializeField] int spawnCircleHeight;
-	[SerializeField] GameObject[] enemyTypes;
+	[SerializeField] Enemy[] enemyTypes;
+	[SerializeField] GameObject spawnerManager;
 
 	// Use this for initialization
+	void Awake()
+	{
+		if (!inEditor)
+			spawnerManager = GameObject.FindGameObjectWithTag("EnemySpawnerManager");
+	}
 	void Start () 
 	{
 		hasWaveStarted = false;
@@ -36,6 +43,9 @@ public class EnemySpawner : MonoBehaviour {
 
 		enemyWaveCountBottomText.color = Color.clear;
 		enemyWaveCountTopText.color = Color.clear;
+
+		if (!inEditor)
+			transform.parent = spawnerManager.transform;
 	}
 	
 	void OnTriggerEnter2D(Collider2D other)
@@ -105,10 +115,67 @@ public class EnemySpawner : MonoBehaviour {
 	}
 	public static void ClearEnemies()
 	{
-		foreach (GameObject enemy in enemyWave)
+		if(enemyWave != null) 
 		{
-			Destroy(enemy);
+			foreach (GameObject enemy in enemyWave)
+			{
+				Destroy(enemy);
+			}
+			enemyWave.Clear();
 		}
-		enemyWave.Clear();
+	}
+
+	public override string GetSaveString ()
+	{
+		//int differentEnemyTypes = enemyTypes.Count;
+
+		var saveString = string.Join(SPLIT_CHAR.ToString(), new []{objectID, transform.position.x, transform.position.y, transform.position.z, 
+														barriers[0].transform.position.x, barriers[0].transform.position.y, barriers[0].transform.position.z,
+														barriers[1].transform.position.x, barriers[1].transform.position.y, barriers[1].transform.position.z,
+														minEnemies, maxEnemies, spawnCircleWidth, spawnCircleHeight, barriers[0].transform.localScale.y,
+				/*enemyTypes[0]*/}.Select(s => s.ToString()).ToArray());
+
+		if(enemyTypes == null || enemyTypes.Length == 0)
+		{
+			saveString += SPLIT_CHAR.ToString() + "0";
+
+		} else {
+			saveString += SPLIT_CHAR.ToString() + enemyTypes.Length;
+			for(int i = 0; i < enemyTypes.Length; i++)
+			{
+				saveString += SPLIT_CHAR.ToString() + enemyTypes[i].objectID;
+			}
+		}
+		return saveString;
+	}
+
+	public override void LoadSaveData (string input)
+	{
+		var data = input.Split(SPLIT_CHAR);
+
+		transform.position = new Vector3(float.Parse(data[1]), float.Parse(data[2]), float.Parse(data[3]));
+		barriers[0].transform.position = new Vector3(float.Parse(data[4]), float.Parse(data[5]), float.Parse(data[6]));
+		barriers[1].transform.position = new Vector3(float.Parse(data[7]), float.Parse(data[8]), float.Parse(data[9]));
+		minEnemies = int.Parse(data[10]);
+		maxEnemies = int.Parse(data[11]);
+		spawnCircleWidth = int.Parse(data[12]);
+		spawnCircleHeight = int.Parse(data[13]);
+		barriers[0].transform.localScale = new Vector3(barriers[0].transform.localScale.x, float.Parse(data[14]), barriers[0].transform.localScale.z);
+		barriers[1].transform.localScale = new Vector3(barriers[1].transform.localScale.x, float.Parse(data[14]), barriers[1].transform.localScale.z);
+
+		var enemys = new List<Enemy>();
+		var num = int.Parse(data[15]);
+
+		for(int i = 0; i < num; i++){
+			var objectID = int.Parse(data[16 + i]);
+			var enemyPrefab = (Enemy)LevelObjectMap.instance.GetPrefab(objectID);
+			enemys.Add(enemyPrefab);
+		}
+		enemyTypes = enemys.ToArray();
+		
+	}
+	public override Vector3 GetOffset ()
+	{
+		return Vector3.zero;
 	}
 }

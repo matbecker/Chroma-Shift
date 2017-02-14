@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Enemy : MonoBehaviour {
+public class Enemy : LevelObject {
 
 	public enum EnemyType {Buzzer, Bomber, Bouncer };
 	public EnemyType type;
@@ -13,12 +13,12 @@ public class Enemy : MonoBehaviour {
 		public int attackPower;
 		public int movementSpeed;
 	}
+	public ColourManager colour;
 	[SerializeField] GameObject[] powerUps;
 	[SerializeField] protected Stats stats;
 	[SerializeField] protected Rigidbody2D rb;
 	[SerializeField] protected BoxCollider2D col;
 	[SerializeField] protected SpriteRenderer sprite;
-	[SerializeField] protected ColourManager colour;
 	[SerializeField] protected GameObject target;
 	protected Vector2 direction;
 	[SerializeField] protected float distance;
@@ -56,7 +56,7 @@ public class Enemy : MonoBehaviour {
 	// Update is called once per frame
 	protected virtual void Update () 
 	{
-		if (transform.position.y < LevelManager.Instance.levelBottom)
+		if (transform.position.y < LevelManager.levelBottom)
 			Death();
 
 		distance = direction.magnitude;
@@ -67,6 +67,24 @@ public class Enemy : MonoBehaviour {
 	}
 	protected virtual void FixedUpdate(){}
 
+	protected virtual void OnCollisionEnter2D(Collision2D other)
+	{
+		CheckExtraDamage(other);
+	}
+
+	protected bool CheckExtraDamage(Collision2D other)
+	{
+		if (other.collider.CompareTag("Player"))
+		{
+			if (HelperFunctions.IsContrastingColour(colour.currentColourType, other.gameObject.GetComponent<Hero>().colour.currentColourType))
+			{
+				other.gameObject.SendMessage("Damage", 10, SendMessageOptions.DontRequireReceiver);
+				Debug.Log("--");
+				return true;
+			}
+		}
+		return false;
+	}
 	protected virtual void Death()
 	{
 		int rand = Random.Range(0,5);

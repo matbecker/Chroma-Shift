@@ -56,7 +56,7 @@ public class Bouncer : Enemy {
 	}
 		
 	
-	private void OnCollisionEnter2D(Collision2D other)
+	protected override void OnCollisionEnter2D(Collision2D other)
 	{
 		if (HelperFunctions.GroundCheck(edgeCol) && transform.position.y > other.transform.position.y)
 			grounded = true;
@@ -67,11 +67,15 @@ public class Bouncer : Enemy {
 		if (HelperFunctions.WallCheck(col, transform, false))
 			rb.AddForce(-horizontalForce);
 
-		//if I land on top of the hero
-		if (other.collider.CompareTag("Player") && transform.position.y > other.transform.position.y)
+		if (!CheckExtraDamage(other))
 		{
-			other.gameObject.SendMessage("Damage", stats.attackPower, SendMessageOptions.DontRequireReceiver);
+			//if I land on top of the hero
+			if (other.collider.CompareTag("Player") && transform.position.y > other.transform.position.y)
+			{
+				other.gameObject.SendMessage("Damage", stats.attackPower, SendMessageOptions.DontRequireReceiver);
+			}
 		}
+
 	}
 	private void OnCollisionExit2D(Collision2D other)
 	{

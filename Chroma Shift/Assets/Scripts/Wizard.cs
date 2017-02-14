@@ -77,7 +77,7 @@ public class Wizard : Hero {
 			if (chargingShotTimer < 1.0f)
 			{
 				//increase attack power
-				stats.attackPower = 1;
+				stats.attackPower = 2;
 
 				//expand the size of the projectile
 				tmpProjectile.GetComponent<Transform>().localScale = new Vector3(1.2f,1.2f,1.2f);
@@ -86,7 +86,7 @@ public class Wizard : Hero {
 			else if (chargingShotTimer > 1.0f && chargingShotTimer < 2.0f)
 			{
 				//increase attack power
-				stats.attackPower = 2;
+				stats.attackPower = 3;
 
 				//expand the size of the projectile
 				tmpProjectile.GetComponent<Transform>().localScale = new Vector3(1.4f,1.4f,1.4f);
@@ -95,7 +95,7 @@ public class Wizard : Hero {
 			else if (chargingShotTimer > 2.0f && chargingShotTimer < 3.0f)
 			{
 				//increase attack power
-				stats.attackPower = 3;
+				stats.attackPower = 5;
 
 				//expand the size of the projectile
 				tmpProjectile.GetComponent<Transform>().localScale = new Vector3(1.6f,1.6f,1.6f);
@@ -104,7 +104,7 @@ public class Wizard : Hero {
 			else if (chargingShotTimer > 3.0f)
 			{
 				//increase attack power
-				stats.attackPower = 4;
+				stats.attackPower = 7;
 
 				//expand the size of the projectile
 				tmpProjectile.GetComponent<Transform>().localScale = new Vector3(1.8f,1.8f,1.8f);

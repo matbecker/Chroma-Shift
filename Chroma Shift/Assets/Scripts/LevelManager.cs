@@ -3,21 +3,27 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class LevelManager : Photon.MonoBehaviour {
 
-	//[SerializeField] Transform[] spawnPoints;
-	[SerializeField] GameObject[] heroes;
-	[SerializeField] Transform startPoint;
-	[SerializeField] Text levelTimerBottom;
-	[SerializeField] Text levelTimerTop;
-	public Transform currentSpawnPoint;
+	[System.Serializable]
+	public class Levels
+	{
+		public int id;
+		public string name;
+		public float[] rankTimes;
+	}
+	[SerializeField] Levels[] levels;
+	private int levelIndex;
+	private float levelTimer;
+	[SerializeField] Transform[] spawnPoints;
+	public const int levelBottom = -10;
+	public SpawnPoint currentSpawnPoint;
 	private int spawnPointIndex;
-	public int levelBottom;
 	private bool isInit;
-	private int slowAnimCounter;
-	private bool shrinkText;
-	public float levelCompletionTimer;
+
+	public Action<Hero> OnHeroSpawned;
 
 	private static LevelManager instance;
 	public static LevelManager Instance
@@ -36,14 +42,25 @@ public class LevelManager : Photon.MonoBehaviour {
 
 	private void Awake()
 	{
-		DontDestroyOnLoad(gameObject);
+		//spawnPointIndex = 0;
+		//spawnPoints[spawnPointIndex] = GameObject.FindGameObjectWithTag("Spawner").transform;
+		LevelLoader.Instance.OnLevelLoaded += OnLevelLoaded;
 	}
 
-	// Use this for initialization
-	void Start () 
+	void OnLevelLoaded(Dictionary<int, List<LevelObject>> objectLists) 
 	{
-		spawnPointIndex = 0;
-		currentSpawnPoint = startPoint;
+		levelTimer = levels[levelIndex].rankTimes[3];
+		currentSpawnPoint = null;//spawnPoints[spawnPointIndex];
+
+		var playerSpawners = objectLists[LevelObject.PLAYER_SPAWNER];
+		foreach(SpawnPoint ps in playerSpawners)
+		{
+			if(currentSpawnPoint == null || currentSpawnPoint.transform.position.x > ps.transform.position.x)
+			{
+				currentSpawnPoint = ps;
+			}
+		}
+		currentSpawnPoint.PlayHeroEntry();
 
 		//get the name of the colorwheels current gradient
 		//colourWheelFaceColours[0].name;
@@ -53,7 +70,7 @@ public class LevelManager : Photon.MonoBehaviour {
 		if (!PhotonNetwork.offlineMode)
 		{
 			var hm = HeroManager.Instance;
-			go = PhotonNetwork.Instantiate(HeroManager.Instance.CurrentHeroPrefab.name, currentSpawnPoint.position, Quaternion.identity, 0, 
+			go = PhotonNetwork.Instantiate(HeroManager.Instance.CurrentHeroPrefab.name, currentSpawnPoint.transform.position, Quaternion.identity, 0, 
 				new object[]{
 				hm.currentColorType,
 				hm.currentShadeIndex
@@ -61,57 +78,32 @@ public class LevelManager : Photon.MonoBehaviour {
 		} 
 		else
 		{
-			go = Instantiate(HeroManager.Instance.CurrentHeroPrefab, currentSpawnPoint.position, Quaternion.identity) as GameObject;
+			go = Instantiate(HeroManager.Instance.CurrentHeroPrefab, currentSpawnPoint.transform.position, Quaternion.identity) as GameObject;
+			var hero = go.GetComponent<Hero>();
+
+			hero.colour.currentColourType = HeroManager.Instance.currentColorType;
+			hero.colour.shadeIndex = HeroManager.Instance.currentShadeIndex;
+
+			if(OnHeroSpawned != null) 
+			{
+				OnHeroSpawned(hero);
+			}
+			//PlayerUI.Instance.SetHero(hero);
+			//TODO play player animation
+			// hero.PlayIntro hero.OnSpawn whatev
 		}
-		var colour = go.GetComponent<ColourManager>();
-
-		colour.currentColourType = HeroManager.Instance.currentColorType;
-		colour.shadeIndex = HeroManager.Instance.currentShadeIndex;
+		//var h = go.GetComponent<Hero>();
 
 
-
-		//spawnPointIndex++;
-		isInit = true;
 
 	}
-	
+	private void NextLevel()
+	{
+		
+	}
 	// Update is called once per frame
 	void Update () 
 	{
-		if (isInit)
-		{
-			heroes = GameObject.FindGameObjectsWithTag("Player");
-			isInit = false;
-		}
-
-		levelCompletionTimer -= Time.deltaTime;
-
-		if (slowAnimCounter >= 3)
-		{
-			if (levelTimerBottom.fontSize >= 40 && levelTimerTop.fontSize >= 40)
-				shrinkText = true;
-
-			if (levelTimerBottom.fontSize <= 20 && levelTimerTop.fontSize <= 20)
-				shrinkText = false;
-			
-			if (shrinkText)
-			{
-				levelTimerBottom.fontSize--;
-				levelTimerTop.fontSize--;
-			}
-			else
-			{
-				levelTimerTop.fontSize++;
-				levelTimerBottom.fontSize++;
-			}
-			slowAnimCounter = 0;
-		}
-
-		levelTimerTop.text = Math.Round(levelCompletionTimer, 1).ToString();
-		levelTimerBottom.text = Math.Round(levelCompletionTimer, 1).ToString();
-
-		slowAnimCounter++;
-
+		levelTimer -= Time.deltaTime;
 	}
-
 }

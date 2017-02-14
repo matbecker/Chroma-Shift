@@ -7,6 +7,7 @@ using UnityEngine.UI;
 public class CharacterSelectScreen : Photon.MonoBehaviour {
 
 	public Transform heroPosition;
+	public static string currentLevelName;
 	private List<GameObject> characters;
 	[SerializeField] bool isFocusedScreen;
 	[SerializeField] Text characterText;
@@ -83,14 +84,15 @@ public class CharacterSelectScreen : Photon.MonoBehaviour {
 			var colour = characters[currentHero].GetComponent<ColourManager>();
 			HeroManager.Instance.currentColorType = colour.currentColourType;
 			HeroManager.Instance.currentShadeIndex = colour.shadeIndex;
-			
-			if (PhotonNetwork.offlineMode)
-				SceneManager.LoadScene("Level1");
-			else
-			{
-				PhotonNetwork.LoadLevel("Level1");
-				//PhotonNetwork.automaticallySyncScene = true;
-			}
+
+			LevelLoader.Instance.LoadLevel(currentLevelName);
+//			if (PhotonNetwork.offlineMode)
+//				//SceneManager.LoadScene("Level1");
+//			else
+//			{
+//				//PhotonNetwork.LoadLevel("Level1");
+//				//PhotonNetwork.automaticallySyncScene = true;
+//			}
 			
 
 		}

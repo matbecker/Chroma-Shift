@@ -17,6 +17,8 @@ public class InputManager : MonoBehaviour {
 
 	}
 
+
+
 	//delegate for keyDown event
 	public delegate void KeyDownEvent();
 	//delegate for KeyUp event
@@ -38,7 +40,11 @@ public class InputManager : MonoBehaviour {
 	public event KeyUpEvent UnBlock;
 	public event KeyUpEvent UnAttack;
 	public event AxisEvent Run;
+	public event AxisEvent HorizontalMovement;
+	public event AxisEvent VerticalMovement;
 	public event MouseEvent TrackMouseEvent;
+	public event KeyDownEvent CameraZoomIn;
+	public event KeyDownEvent CameraZoomOut;
 
 	private void Awake()
 	{
@@ -113,6 +119,23 @@ public class InputManager : MonoBehaviour {
 		{
 			//track the cursor of the mouse
 			TrackMouseEvent(Input.mousePosition.x, Input.mousePosition.y);
+		}
+		//Editor options
+		if (Input.GetKey("z") && CameraZoomIn != null)
+		{
+			CameraZoomIn();
+		}
+		if (Input.GetKey("x") && CameraZoomOut != null)
+		{
+			CameraZoomOut();
+		}
+		if (HorizontalMovement != null)
+		{
+			HorizontalMovement(Input.GetAxis("Horizontal"));
+		}
+		if (VerticalMovement != null)
+		{
+			VerticalMovement(Input.GetAxis("Vertical"));
 		}
 	}
 }

@@ -97,17 +97,23 @@ public class Buzzer : Enemy {
 		direction *= stats.movementSpeed;
 		rb.velocity = new Vector2(direction.x, rb.velocity.y);
 	}
-	private void OnCollisionEnter2D(Collision2D other)
+	protected override void OnCollisionEnter2D(Collision2D other)
 	{
-		//if i swoop at the hero 
-		if (other.collider.CompareTag("Player") && other.transform.position.y < transform.position.y)
+		base.OnCollisionEnter2D(other);
+
+		if(!CheckExtraDamage(other))
 		{
-			other.gameObject.SendMessage("Damage", stats.attackPower, SendMessageOptions.DontRequireReceiver);
+			//if i swoop at the hero 
+			if (other.collider.CompareTag("Player") && other.transform.position.y < transform.position.y)
+			{
+				other.gameObject.SendMessage("Damage", stats.attackPower, SendMessageOptions.DontRequireReceiver);
 
-			timer = 0.0f;
+				timer = 0.0f;
 
-			state = State.Avoid;
+				state = State.Avoid;
+			}
 		}
+
 		//if the hero lands on top of me
 		if (other.collider.CompareTag("Player") && other.transform.position.y > transform.position.y + sprite.sprite.bounds.extents.y)
 		{

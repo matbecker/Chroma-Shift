@@ -27,22 +27,32 @@ public class Projectile : MonoBehaviour {
 	}
 	void OnTriggerEnter2D(Collider2D other)
 	{
+		var h = hero.GetComponent<Hero>();
 		if (other.CompareTag("Enemy"))
 		{
-			switch (type)
+			//if the enemy is the same colour as me damage them critically 
+			if (HelperFunctions.IsSameColour(h.colour.currentColourType, other.GetComponent<Enemy>().colour.currentColourType))
 			{
-			case ProjectileType.Arrow:
-				other.SendMessage("Damage", hero.GetComponent<Hero>().stats.attackPower, SendMessageOptions.DontRequireReceiver);
-				Destroy(gameObject);
-				break;
-			case ProjectileType.Magic:
-				other.SendMessage("Damage", hero.GetComponent<Hero>().stats.attackPower, SendMessageOptions.DontRequireReceiver);
-				Destroy(gameObject);
-				break;
-			default:
-				break;
+				other.SendMessage("Damage", 10, SendMessageOptions.DontRequireReceiver);
+				Debug.Log("++");
 			}
-			Debug.Log(hero.GetComponent<Hero>().stats.attackPower);
+			else
+			{
+				switch (type)
+				{
+				case ProjectileType.Arrow:
+					other.SendMessage("Damage", h.stats.attackPower, SendMessageOptions.DontRequireReceiver);
+					Destroy(gameObject);
+					break;
+				case ProjectileType.Magic:
+					other.SendMessage("Damage", h.stats.attackPower, SendMessageOptions.DontRequireReceiver);
+					Destroy(gameObject);
+					break;
+				default:
+					break;
+				}
+			}
+//			Debug.Log(hero.GetComponent<Hero>().stats.attackPower);
 		}
 		if (((1 << other.gameObject.layer) & HelperFunctions.collidableLayers) != 0)
 		{

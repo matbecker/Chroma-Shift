@@ -3,23 +3,22 @@ using System.Collections;
 
 public class Dagger : MonoBehaviour {
 
-	[SerializeField] GameObject ninja;
-	// Use this for initialization
-	void Start () 
-	{
-		ninja = GameObject.FindGameObjectWithTag("Player");
-	}
-	
-	// Update is called once per frame
-	void Update () 
-	{
-	
-	}
+	[SerializeField] Hero ninja;
+
 	void OnTriggerEnter2D(Collider2D other)
 	{
-		if (other.CompareTag("Enemy") && ninja.GetComponent<Hero>().isAttacking)
+		if (other.CompareTag("Enemy") && ninja.isAttacking)
 		{
-			other.gameObject.SendMessage("Damage", ninja.GetComponent<Hero>().stats.attackPower, SendMessageOptions.DontRequireReceiver);
+			//if the enemy is the same colour as me damage them critically 
+			if (HelperFunctions.IsSameColour(ninja.colour.currentColourType, other.GetComponent<Enemy>().colour.currentColourType))
+			{
+				other.SendMessage("Damage", 10, SendMessageOptions.DontRequireReceiver);
+				Debug.Log("++");
+			}
+			else
+				other.SendMessage("Damage", ninja.stats.attackPower, SendMessageOptions.DontRequireReceiver);
+
+			//Debug.Log("My dagger is" + ninja.colour.currentColourType);
 		}
 	}
 }

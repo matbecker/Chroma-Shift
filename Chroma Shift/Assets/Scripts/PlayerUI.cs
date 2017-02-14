@@ -29,18 +29,39 @@ public class PlayerUI : Photon.MonoBehaviour {
 	private float prevHealth;
 	private bool isInit;
 
+	void OnHeroSpawned(Hero hero) 
+	{
+		this.hero = hero;
+		heroImage.sprite = heroImages[(int)hero.type];
+
+		InputManager.Instance.SwitchColour += SwitchHealthBarColour;
+		InputManager.Instance.SwitchShade += SwitchHealthBarShade;
+
+		healthBar.color = hero.GetComponent<SpriteRenderer>().color;
+
+		SetLifeText();
+
+		for (int i = 0; i < hero.stats.colourShifts; i++)
+		{
+			colourShifts[i].SetActive(true);
+		}
+
+	}
+
+	void Awake() 
+	{
+		LevelManager.Instance.OnHeroSpawned += OnHeroSpawned;
+	}
+
 	// Use this for initialization
 	void Start () 
 	{
-		
-
 		for (int i = 0; i < colourShifts.Length; i++)
 		{
 			colourShifts[i].SetActive(false);
 		}
-
-		isInit = true;
 	}
+
 	void OnDestroy()
 	{
 		//if (photonView.isMine || PhotonNetwork.offlineMode)
@@ -54,57 +75,13 @@ public class PlayerUI : Photon.MonoBehaviour {
 		//}
 
 	}
-	
+
 	// Update is called once per frame
 	void Update () 
 	{
-		if (isInit)
-			hero = GameObject.FindGameObjectWithTag("Player").GetComponent<Hero>();
-			
-		if (hero.isInit)
-		{
-			switch (hero.type)
-			{
-			case Hero.Type.Archer:
-				heroImage.sprite = heroImages[(int)hero.type];
-				heroImage.rectTransform.localPosition = new Vector2(-468.0f, 214.0f);
-				heroImage.rectTransform.sizeDelta = new Vector2(15.0f, 15.0f);
-				break;
-			case Hero.Type.Ninja:
-				heroImage.sprite = heroImages[(int)hero.type];
-				heroImage.rectTransform.localPosition = new Vector2(-470.0f, 208.0f);
-				heroImage.rectTransform.sizeDelta = new Vector2(20.0f, 10.0f);
-				break;
-			case Hero.Type.Swordsmen:
-				heroImage.sprite = heroImages[(int)hero.type];
-				heroImage.rectTransform.localPosition = new Vector2(-470.0f, 208.0f);
-				heroImage.rectTransform.sizeDelta = new Vector2(20.0f, 10.0f);
-				break;
-			case Hero.Type.Wizard:
-				heroImage.sprite = heroImages[(int)hero.type];
-				heroImage.rectTransform.localPosition = new Vector2(-468.0f, 208.0f);
-				heroImage.rectTransform.sizeDelta = new Vector2(20.0f, 10.0f);
-				break;
-			default:
-				break;
-			}
-
-			healthBar.color = hero.GetComponent<SpriteRenderer>().color;
-
-			InputManager.Instance.SwitchColour += SwitchHealthBarColour;
-			InputManager.Instance.SwitchShade += SwitchHealthBarShade;
-
-			SetLifeText();
-
-			for (int i = 0; i < hero.stats.colourShifts; i++)
-			{
-				colourShifts[i].SetActive(true);
-			}
-
-			hero.isInit = false;
-			isInit = false;
-		}
-		 
+		if(hero == null) 
+			return;
+		
 		switch (hero.stats.colourShifts)
 		{
 		case 0:
@@ -132,7 +109,9 @@ public class PlayerUI : Photon.MonoBehaviour {
 		default:
 			break;
 		}
-			
+		//fix this shit
+		healthBar.color = hero.GetComponent<SpriteRenderer>().color;
+
 		healthBar.rectTransform.localScale = new Vector2((float)hero.stats.currentHealth / (float)hero.stats.maxHealth, 1.0f);
 		//Mathf.Lerp(prevHealth, currentHealth, 0.5f);
 	

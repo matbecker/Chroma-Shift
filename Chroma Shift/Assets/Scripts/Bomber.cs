@@ -34,12 +34,12 @@ public class Bomber : Enemy {
 	{
 		base.Move();
 	}
-	private void OnCollisionEnter2D(Collision2D other)
+	protected override void OnCollisionEnter2D(Collision2D other)
 	{
-		if (other.collider.CompareTag("Player"))
-		{
-			other.gameObject.SendMessage("Damage", stats.attackPower, SendMessageOptions.DontRequireReceiver);
-			Death();
-		}
+		if(!CheckExtraDamage(other))
+			if (other.collider.CompareTag("Player"))
+				other.gameObject.SendMessage("Damage", stats.attackPower, SendMessageOptions.DontRequireReceiver);
+
+		Death();
 	}
 }
