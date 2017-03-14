@@ -1,10 +1,19 @@
 ﻿using UnityEngine;
 using System.Collections;
+using DG.DemiLib;
+using DG.Tweening;
 
-public class Enemy : LevelObject {
+public class Enemy : LevelObject, IDamageable {
 
 	public enum EnemyType {Buzzer, Bomber, Bouncer };
 	public EnemyType type;
+
+	public static int PURPLE_INDEX = 0;
+	public static int BLUE_INDEX = 1;
+	public static int GREEN_INDEX = 2;
+	public static int YELLOW_INDEX = 3;
+	public static int ORANGE_INDEX = 4;
+	public static int RED_INDEX = 5;
 
 	[System.Serializable]
 	public class Stats
@@ -13,8 +22,11 @@ public class Enemy : LevelObject {
 		public int attackPower;
 		public int movementSpeed;
 	}
+
 	public ColourManager colour;
 	[SerializeField] GameObject[] powerUps;
+	[SerializeField] protected ParticleSystem[] enemyParticles;
+	[SerializeField] protected ParticleSystem fx;
 	[SerializeField] protected Stats stats;
 	[SerializeField] protected Rigidbody2D rb;
 	[SerializeField] protected BoxCollider2D col;
@@ -26,29 +38,43 @@ public class Enemy : LevelObject {
 	protected virtual void Awake()
 	{
 		target = GameObject.FindGameObjectWithTag("Player");
+
+		//disable particle systems
+		foreach (ParticleSystem ps in enemyParticles)
+		{
+			ps.gameObject.SetActive(false);
+		}
 	}
 	// Use this for initialization
 	protected virtual void Start () 
 	{
 		rb = gameObject.GetComponent<Rigidbody2D>();
-		col = gameObject.GetComponent<BoxCollider2D>();
-		sprite = gameObject.GetComponent<SpriteRenderer>();
-		colour = gameObject.GetComponent<ColourManager>();
-
+		//colour = gameObject.GetComponent<ColourManager>();
+		//top or bottom colour
 		int rand = Random.Range(0,2);
+		//each shade
 		int randShade = Random.Range(0,6);
 
 		if (rand == 0)
 		{
-			var topColour = colour.colors[(int)ColourWheel.Instance.currentColourTop].colors[randShade];
+			var indexT = (int)ColourWheel.Instance.currentColourTop;
+			var topColour = colour.colors[indexT].color[randShade];
+			enemyParticles[indexT].gameObject.SetActive(true);
+			fx = enemyParticles[indexT];
 			topColour.a = 1;
 			sprite.color = topColour;
+			colour.currentColourType = (ColourManager.ColourType)ColourWheel.Instance.currentColourTop;
+
 		}
 		else
 		{
-			var bottomColour = colour.colors[(int)ColourWheel.Instance.currentColourBottom].colors[randShade];
+			var indexB = (int)ColourWheel.Instance.currentColourBottom;
+			var bottomColour = colour.colors[indexB].color[randShade];
+			enemyParticles[indexB].gameObject.SetActive(true);
+			fx = enemyParticles[indexB];
 			bottomColour.a = 1;
 			sprite.color = bottomColour;
+			colour.currentColourType = (ColourManager.ColourType)ColourWheel.Instance.currentColourBottom;
 		}
 			
 	}
@@ -56,34 +82,28 @@ public class Enemy : LevelObject {
 	// Update is called once per frame
 	protected virtual void Update () 
 	{
-		if (transform.position.y < LevelManager.levelBottom)
+		if (transform.position.y < LevelManager.LEVEL_BOTTOM)
 			Death();
 
-		distance = direction.magnitude;
+		distance = (target.transform.position - transform.position).magnitude;
 
 		if (distance > 20)
 			Death();
-
 	}
 	protected virtual void FixedUpdate(){}
 
 	protected virtual void OnCollisionEnter2D(Collision2D other)
 	{
-		CheckExtraDamage(other);
-	}
+		var damage = stats.attackPower;
+		var hero = other.gameObject.GetComponent<Hero>();
 
-	protected bool CheckExtraDamage(Collision2D other)
-	{
-		if (other.collider.CompareTag("Player"))
+		if (hero != null)
 		{
-			if (HelperFunctions.IsContrastingColour(colour.currentColourType, other.gameObject.GetComponent<Hero>().colour.currentColourType))
-			{
-				other.gameObject.SendMessage("Damage", 10, SendMessageOptions.DontRequireReceiver);
-				Debug.Log("--");
-				return true;
-			}
+			if (HelperFunctions.IsContrastingColour(colour.currentColourType, hero.colour.currentColourType))
+				damage = 10;
+
+			hero.Damage(damage);
 		}
-		return false;
 	}
 	protected virtual void Death()
 	{
@@ -93,50 +113,21 @@ public class Enemy : LevelObject {
 		{
 			GameObject powerUp = Instantiate(powerUps[0], col.bounds.center, Quaternion.identity) as GameObject;
 		}
-		EnemySpawner.enemyWave.Remove(gameObject);
-		Destroy(gameObject);
+		EnemySpawner.enemyWave.Remove(this);
 	}
-	protected virtual void Damage(int damageAmount)
+	public virtual void Damage(int damageAmount)
 	{
 		stats.health -= damageAmount;
 
 		if (stats.health <= 0)
 		{
 			Death();
-			return;
 		}
-		SetSize();
 	}
-	protected virtual void Move()
-	{
-		direction = target.transform.position - transform.position;
-		direction.Normalize();
-		direction *= stats.movementSpeed;
-		rb.velocity = new Vector2(direction.x, rb.velocity.y);
-	}
-	protected virtual void SetSize()
-	{
-		switch (type)
-		{
-		case EnemyType.Bomber:
-			gameObject.transform.localScale = new Vector3(1.0f,0.75f,1.0f);
-			break;
-		case EnemyType.Bouncer:
-			if (stats.health <= 2)
-				gameObject.transform.localScale = new Vector3(1.0f,1.0f,1.0f);
-			else if (stats.health <= 4 && stats.health > 2)
-				gameObject.transform.localScale = new Vector3(1.25f,1.25f,1.25f);
-			else if (stats.health <= 6 && stats.health > 4)
-				gameObject.transform.localScale = new Vector3(1.5f,1.5f,1.5f);
-			break;
-		case EnemyType.Buzzer:
-			gameObject.transform.localScale = new Vector3(1.0f,0.25f,1.0f);
-			break;
-		default:
-			break;
-		}
-			//size differences based on health
-			
+	protected virtual void Move(){}
 
+	protected virtual void SetSize(Vector3 sizeValue, float duration)
+	{
+		transform.DOScale(sizeValue, duration).SetEase(Ease.Linear);
 	}
 }

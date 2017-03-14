@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using DG.DemiLib;
+using DG.Tweening;
 
 public class Wizard : Hero {
 
@@ -11,13 +13,9 @@ public class Wizard : Hero {
 	[SerializeField] float desiredHoverDuration;
 	[SerializeField] private bool isChargingShot;
 	[SerializeField] private float chargingShotTimer;
-	[SerializeField] GameObject shield;
-	[SerializeField] float lerpDuration;
-	private Color halfTransparency;
-	private float startLerpTimer;
-	private float endLerpTimer;
+	[SerializeField] ParticleSystem ps;
+	[SerializeField] BoxCollider2D shieldCol;
 	private bool freezeBlock;
-	private Vector3 rotation;
 
 
 	protected override void Start ()
@@ -29,9 +27,6 @@ public class Wizard : Hero {
 			InputManager.Instance.Hover += Hover;
 			InputManager.Instance.UnAttack += UnAttack;
 		}
-
-		shield.GetComponent<SpriteRenderer>().color = Color.clear;
-		halfTransparency = new Color(1,1,1,0.5f);
 		freezeBlock = false;
 
 	}
@@ -119,20 +114,21 @@ public class Wizard : Hero {
 
 		if (startShieldTimer)
 		{
-			//make the shield bubble appear
-			shield.GetComponent<SpriteRenderer>().color = Color.Lerp(Color.clear, halfTransparency, startLerpTimer);
-
-			startLerpTimer += Time.deltaTime / lerpDuration;
+			shieldCol.enabled = true;
+			ps.Play();
 		}
 		else
 		{
-			freezeBlock = false;
-			//make the shield bubble dissapear
-			shield.GetComponent<SpriteRenderer>().color = Color.Lerp(halfTransparency, Color.clear, endLerpTimer);
-
-			endLerpTimer += Time.deltaTime / lerpDuration;
+			shieldCol.enabled = false;
+			ps.Stop();
 		}
-		rotation = transform.rotation.eulerAngles;
+			
+		
+
+		if (isHovering && Input.GetButtonUp("Jump"))
+		{
+			StopHovering();
+		}
 	}
 
 	protected override void Attack ()
@@ -143,10 +139,10 @@ public class Wizard : Hero {
 
 		//if the wizard is facing right spawn a projectile at the right side of their sprite
 		if(facingRight)
-			spawnProjectilePoint = new Vector3(transform.position.x + edgeCol.bounds.extents.x + projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z);
+			spawnProjectilePoint = new Vector3(transform.position.x + edgeCol.bounds.extents.x + projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y + 0.1f, transform.position.z);
 		//if the player is facing left spawn a projectile at the left side of their sprite
 		else 
-			spawnProjectilePoint = new Vector3(transform.position.x - edgeCol.bounds.extents.x - projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y, transform.position.z);
+			spawnProjectilePoint = new Vector3(transform.position.x - edgeCol.bounds.extents.x - projectile.GetComponent<SpriteRenderer>().sprite.bounds.extents.x, transform.position.y + 0.1f, transform.position.z);
 
 
 		StartChargeShot(spawnProjectilePoint);
@@ -162,6 +158,8 @@ public class Wizard : Hero {
 		tmpProjectile = Instantiate(projectile, spawnProjectilePoint, Quaternion.identity) as GameObject;
 		//Freeze the y position of the projectile so it doesnt fall
 		tmpProjectile.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezePositionY;
+
+		tmpProjectile.GetComponent<Projectile>().hero = this;
 		//wizard is now charging their shot
 		isChargingShot = true;
 	}
@@ -191,52 +189,61 @@ public class Wizard : Hero {
 	[PunRPC] protected override void Block ()
 	{
 		base.Block ();
-
-		//dont allow the player to reset the LerpTimer if they are currently blocking
-		if (!freezeBlock)
-		{
-			startLerpTimer = 0.0f;
-			endLerpTimer = 0.0f;
-		}
-		freezeBlock = true;
 	}
 	protected override void OnCollisionEnter2D (Collision2D other)
 	{
 		base.OnCollisionEnter2D (other);
 
-		if (HelperFunctions.GroundCheck(edgeCol))
+		if (other == null)
+			return;
+
+		var enemy = other.gameObject.GetComponent<Enemy>();
+
+		if (enemy != null && startShieldTimer)
+		{
+			Rigidbody2D enemyRb = enemy.GetComponent<Rigidbody2D>();
+
+			Vector2 force = Vector2.zero;
+
+			//if the enemy lands on top of me
+			if (enemyRb != null && enemy.transform.position.y  - enemy.GetComponent<BoxCollider2D>().bounds.extents.y > transform.position.y + boxCol.bounds.extents.y)
+			{
+				force = Vector2.up * 50.0f;
+			}
+
+			if (enemyRb != null)
+				force = (enemy.transform.position.x < transform.position.x) ? Vector2.left * 100.0f : Vector2.right * 100.0f;
+				
+			enemyRb.AddForce(force);
+		}
+
+		if (HelperFunctions.GroundCheck(edgeCol, rb))
 		{
 			isHovering = false;
 			canHover = false;
 		}
-	}
-
-	private void OnCollisionExit2D (Collision2D other)
-	{
-		//player is off the ground and can hover if they wish
-		if(!grounded && photonView.isMine)
-			canHover = true;
+		rb.constraints = RigidbodyConstraints2D.FreezeRotation;
 	}
 
 	private void Hover()
 	{
 		//if the player can hover freeze their y position so they begin hovering
-		if (canHover)
+		if (!grounded)
 		{
+			transform.DOMoveY(transform.position.y - 0.1f, 0.2f, false).OnComplete(() => {
+				transform.DOMoveY(transform.position.y + 0.2f, 0.2f, false);
+			});
 			rb.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
 
 			//player is now hovering 
 			isHovering = true;
 		}
-			
-		
 
 	}
 
 	private void StopHovering()
 	{
 		//unfreeze the players position
-		rb.constraints = RigidbodyConstraints2D.None;
 		rb.constraints = RigidbodyConstraints2D.FreezeRotation;
 
 		//player is no longer hovering

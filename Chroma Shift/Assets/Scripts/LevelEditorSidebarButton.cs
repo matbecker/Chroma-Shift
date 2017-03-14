@@ -5,12 +5,12 @@ using System.Collections;
 public class LevelEditorSidebarButton : MonoBehaviour {
 
 	public LevelEditorSidebar.Tool tool;
-	public int toolIndex;
 	[SerializeField] Image image;
 	public LevelObject createdObject;
+	[SerializeField] Color colour;
 
-	public void SetHighlight(Color color)
+	public void SetHighlight(bool clicked)
 	{
-		image.color = color;
+		image.color = (clicked) ? Color.gray : colour;
 	}
 }

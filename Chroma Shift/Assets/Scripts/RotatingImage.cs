@@ -21,8 +21,6 @@ public class RotatingImage : MonoBehaviour {
 			sprite = gameObject;
 			sprite.GetComponent<SpriteRenderer>().color = new Color(Random.value, Random.value, Random.value, 1.0f);
 		}
-			
-			
 	}
 	
 	// Update is called once per frame

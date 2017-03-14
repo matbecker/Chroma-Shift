@@ -1,6 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
+using System.Collections.Generic;
+using DG.DemiLib;
+using DG.Tweening;
 
 public class PlayerUI : Photon.MonoBehaviour {
 
@@ -19,33 +22,44 @@ public class PlayerUI : Photon.MonoBehaviour {
 
 	[SerializeField] Hero hero;
 	[SerializeField] Image healthBar;
-	[SerializeField] Sprite[] heroImages;
 	[SerializeField] GameObject[] colourShifts;
-	[SerializeField] Image heroImage;
-	[SerializeField] Text lifeTextTop;
-	[SerializeField] Text lifeTextBottom;
-	//[SerializeField] Hero.Type heroType;
-	private float currentHealth;
-	private float prevHealth;
+	[SerializeField] Text levelTimeTextTop;
+	[SerializeField] Text levelTimeTextBottom;
+	[SerializeField] StarBehaviour star;
+	[SerializeField] LargeGradient largeGradient;
+	[Range(0.0f, 60.0f)] [Tooltip("Establishes the length of time to transition over a colour")]
+	[SerializeField] float transitionTime;
+	private float transitionStep;
+	private float transitionTotal;
+	private float transitionLast;
+	private Color titleColourStart;
+	private Color titleColourEnd;
+	public Animator timerAnim;
+	public Text currentEnemiesTop;
+	public Text currentEnemiesBottom;
 	private bool isInit;
+	private bool atEnd;
+	public Canvas canvas;
+	[SerializeField] List<GameObject> uiObjects;
 
 	void OnHeroSpawned(Hero hero) 
 	{
 		this.hero = hero;
-		heroImage.sprite = heroImages[(int)hero.type];
-
 		InputManager.Instance.SwitchColour += SwitchHealthBarColour;
 		InputManager.Instance.SwitchShade += SwitchHealthBarShade;
+		InputManager.Instance.Pause += Pause;
 
-		healthBar.color = hero.GetComponent<SpriteRenderer>().color;
-
-		SetLifeText();
+		healthBar.color = hero.sprite.color;
 
 		for (int i = 0; i < hero.stats.colourShifts; i++)
 		{
 			colourShifts[i].SetActive(true);
 		}
 
+		currentEnemiesTop.color = Color.clear;
+		currentEnemiesBottom.color = Color.clear;
+		star.NewLevel(LevelManager.Instance.levelTimer);
+		timerAnim.SetBool("finish", false);
 	}
 
 	void Awake() 
@@ -56,24 +70,23 @@ public class PlayerUI : Photon.MonoBehaviour {
 	// Use this for initialization
 	void Start () 
 	{
+		canvas.sortingOrder = 10;
+		uiObjects = new List<GameObject>();
 		for (int i = 0; i < colourShifts.Length; i++)
 		{
 			colourShifts[i].SetActive(false);
 		}
+		LevelManager.Instance.Restart += RestartLevel;
 	}
 
 	void OnDestroy()
 	{
-		//if (photonView.isMine || PhotonNetwork.offlineMode)
-		//{
 		if (InputManager.Instance)
 		{
 			InputManager.Instance.SwitchColour -= SwitchHealthBarColour;
 			InputManager.Instance.SwitchShade -= SwitchHealthBarShade;
+			InputManager.Instance.Pause -= Pause;
 		}
-			
-		//}
-
 	}
 
 	// Update is called once per frame
@@ -109,32 +122,66 @@ public class PlayerUI : Photon.MonoBehaviour {
 		default:
 			break;
 		}
-		//fix this shit
-		healthBar.color = hero.GetComponent<SpriteRenderer>().color;
+		 
+		healthBar.color =  new Color(hero.sprite.color.r,hero.sprite.color.g, hero.sprite.color.b, (float)hero.stats.currentHealth / (float)hero.stats.maxHealth);
 
-		healthBar.rectTransform.localScale = new Vector2((float)hero.stats.currentHealth / (float)hero.stats.maxHealth, 1.0f);
-		//Mathf.Lerp(prevHealth, currentHealth, 0.5f);
+		levelTimeTextBottom.text = LevelManager.Instance.levelTimer.ToString("F2");
+		levelTimeTextTop.text = levelTimeTextBottom.text;
+
+		if (atEnd)
+		{
+//			transitionStep += Time.deltaTime;
+//			if (transitionStep >= transitionTotal)
+//			{
+//				TransitionTextColour();
+//			}
+			//levelTimeTextTop.color = Color.Lerp(titleColourStart, titleColourEnd, transitionStep / transitionTotal);
+		}
 	
 	}
 	private void SwitchHealthBarColour()
 	{
-		//if (photonView.isMine || PhotonNetwork.offlineMode)
-		//if (hero.stats.colourShifts != 0)
-//		for (int i = 0; i < hero.stats.colourShifts; i++)
-//		{
-//			colourShifts[i].SetActive(true);
-//		}
-		healthBar.color = hero.GetComponent<SpriteRenderer>().color;
+		healthBar.color = hero.sprite.color;
 	}
 	private void SwitchHealthBarShade()
 	{
-		//if (photonView.isMine || PhotonNetwork.offlineMode)
-		//if (hero.stats.colourShifts != 0)
-		healthBar.color = hero.GetComponent<SpriteRenderer>().color;
+		healthBar.color = hero.sprite.color;
 	}
-	public void SetLifeText()
+	private void RestartLevel()
 	{
-		lifeTextBottom.text = "x  " + hero.stats.lives.ToString();;
-		lifeTextTop.text = "x  " + hero.stats.lives.ToString();
+		TimerStart();
 	}
+	public void TimerStop()
+	{
+		timerAnim.SetBool("finish", true);
+	}
+	public void TimerStart()
+	{
+		timerAnim.SetBool("finish", false);
+	}
+	public void TimerEnd()
+	{
+		atEnd = true;
+	}
+	public void TimerFlash()
+	{
+		timerAnim.SetTrigger("flash");
+	}
+	private void TransitionTextColour()
+	{
+		transitionStep -= transitionTotal;
+		float rand = Random.value;
+		transitionTotal = (rand - transitionLast) * transitionTime;
+
+		titleColourStart = titleColourEnd;
+		titleColourEnd = largeGradient.Evaluate(rand);
+	}
+	private void Pause()
+	{
+		foreach (GameObject obj in uiObjects)
+		{
+			
+		}
+	}
+
 }

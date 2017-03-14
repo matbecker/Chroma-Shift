@@ -25,8 +25,6 @@ public class Buzzer : Enemy {
 
 		type = EnemyType.Buzzer;
 
-		SetSize();
-
 		state = State.Move;
 	}
 	protected override void Update ()
@@ -99,26 +97,24 @@ public class Buzzer : Enemy {
 	}
 	protected override void OnCollisionEnter2D(Collision2D other)
 	{
-		base.OnCollisionEnter2D(other);
-
-		if(!CheckExtraDamage(other))
-		{
-			//if i swoop at the hero 
-			if (other.collider.CompareTag("Player") && other.transform.position.y < transform.position.y)
-			{
-				other.gameObject.SendMessage("Damage", stats.attackPower, SendMessageOptions.DontRequireReceiver);
-
-				timer = 0.0f;
-
-				state = State.Avoid;
-			}
-		}
-
+		
 		//if the hero lands on top of me
 		if (other.collider.CompareTag("Player") && other.transform.position.y > transform.position.y + sprite.sprite.bounds.extents.y)
 		{
 			other.gameObject.GetComponent<Rigidbody2D>().AddForce(Vector2.up * 200);
 			Damage(2);
+			return;
 		}
+		base.OnCollisionEnter2D(other);
+//		//if i swoop at the hero 
+//		if (other.collider.CompareTag("Player") && other.transform.position.y < transform.position.y)
+//		{				
+//			other.gameObject.SendMessage("Damage", stats.attackPower, SendMessageOptions.DontRequireReceiver);
+//
+//			timer = 0.0f;
+//
+//			state = State.Avoid;
+//			}
+//		}
 	}
 }

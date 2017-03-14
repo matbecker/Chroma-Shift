@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using DG.DemiLib;
+using DG.Tweening;
 
 public class Archer : Hero {
 
@@ -13,6 +15,9 @@ public class Archer : Hero {
 
 		if(photonView.isMine)
 			InputManager.Instance.TrackMouseEvent += TrackMouseEvent;
+
+		shield.GetComponent<SpriteRenderer>().color = Color.clear;
+		bow.GetComponent<SpriteRenderer>().color = Color.white;
 	}
 	protected override void OnDestroy ()
 	{
@@ -55,8 +60,12 @@ public class Archer : Hero {
 		GameObject arrow = Instantiate(projectile, spawn, Quaternion.identity) as GameObject;
 		//set the projectiles velocity
 		arrow.GetComponent<Rigidbody2D>().velocity = velocity;
+
+		arrow.GetComponent<Projectile>().hero = this;
 		//get the scale of the arrow
 		Vector3 scale = arrow.transform.localScale;
+
+		//arrow.transform.localEulerAngles = new Vector3(bow.transform.rotation.eulerAngles.x, bow.transform.rotation.y, bow.transform.rotation.eulerAngles.z);
 		//flip the scale of the arrow if the velocity has been negated 
 		arrow.transform.localScale = new Vector3(scale.x * (velocity.x < 0 ? -1 : 1), scale.y, scale.z);
 
@@ -68,37 +77,22 @@ public class Archer : Hero {
 
 		if (canBlock)
 		{
-			//hide the archers bow
-			bow.GetComponent<SpriteRenderer>().sortingOrder = 1;
-			//make the archers shield appear
-			shield.GetComponent<SpriteRenderer>().sortingOrder = 3;
-			//move the shield ahead a bit
-			shield.transform.Translate(new Vector3(0.1f,0.0f,0.0f));
+			bow.GetComponent<SpriteRenderer>().DOColor(Color.clear,0.1f);
+			shield.GetComponent<SpriteRenderer>().DOColor(Color.white, 0.1f);
 		}
-
 	}
 
 	[PunRPC] protected override void FinishedBlocking()
 	{
 		base.FinishedBlocking();
-
-		//TODO fix bug that the shield moves ahead one and is stuck ahead
-		if (canBlock)
-		{
-			//make the bow reappear
-			bow.GetComponent<SpriteRenderer>().sortingOrder = 3;
-			//hide the shield again
-			shield.GetComponent<SpriteRenderer>().sortingOrder = 1;
-			//move the shield back to its original position
-			shield.transform.Translate(new Vector3(-0.1f,0.0f,0.0f));
-		}
-
+		bow.GetComponent<SpriteRenderer>().DOColor(Color.white,0.1f);
+		shield.GetComponent<SpriteRenderer>().DOColor(Color.clear, 0.1f);
 	}
 
 	private void TrackMouseEvent(float x, float y)
 	{
 		//track the mouse cursor at the position of the player
-		y -= Camera.main.WorldToScreenPoint(transform.position).y;
+		y -= CameraBehaviour.Instance.GetComponentInChildren<Camera>().WorldToScreenPoint(transform.position).y;
 		//clamp the rotation of the bow between 0 and 90 degrees
 		y = Mathf.Clamp(y, 0, 90);
 		//rotate the bow zround the z axis based on the mouse position
@@ -109,12 +103,7 @@ public class Archer : Hero {
 	{
 		base.Update ();
 
-		if (canBlock)
-		{
-			shield.SetActive(true);
-		}
-		else
-			shield.SetActive(false);
-
+		var block = (canBlock) ? true : false;
+		shield.SetActive(block);
 	}
 }

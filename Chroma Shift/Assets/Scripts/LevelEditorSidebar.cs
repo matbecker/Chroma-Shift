@@ -5,18 +5,19 @@ using UnityEditor;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using DG.DemiLib;
+using DG.Tweening;
 
 public class LevelEditorSidebar : MonoBehaviour {
 
 	public enum Tool { None, Move, Create, Delete };
 	private LevelEditorSidebarButton currentButton;
 	private Tool currentTool { get { return currentButton.tool; } }
-	private int currentIndex { get { return currentButton.toolIndex; } }
-
-	public List<LevelEditorSidebarButton> buttons;
 	public LevelObject currentHeldObject;
 	public Vector2 gridSize;
 	public bool bounds;
+	private Transform currentPanel;
+	private Tween panelTween;
 
 	public List<LevelObject> levelObjects = new List<LevelObject>();
 
@@ -25,17 +26,44 @@ public class LevelEditorSidebar : MonoBehaviour {
 		bounds = true;
 	}
 
+	public void PanelClicked(Transform panel) 
+	{
+		if(currentPanel == panel)
+			return;
+
+		if(panelTween != null)
+			panelTween.Kill();
+		
+		HidePanel();
+		panel.localScale = Vector3.zero;
+		panel.gameObject.SetActive(true);
+		panelTween = panel.DOScale(Vector3.one, 0.3f).OnComplete(() => panelTween = null);
+		currentPanel = panel;
+	}
+
+	void HidePanel()
+	{
+		if(currentPanel != null) 
+		{
+			var panel = currentPanel;
+			currentPanel.DOScale(Vector3.zero, 0.3f).OnComplete(() => panel.gameObject.SetActive(false));
+			currentPanel = null;
+		}
+	}
+
 	public void OnButtonClicked(LevelEditorSidebarButton button)
 	{
+		HidePanel();
+
 		if(currentButton)
-			currentButton.SetHighlight(Color.white);
+			currentButton.SetHighlight(false);
 
 		if(currentHeldObject) 
 			Destroy(currentHeldObject.gameObject);
 
 		currentButton = button;
 
-		currentButton.SetHighlight(Color.gray);
+		currentButton.SetHighlight(true);
 
 		if (currentTool == Tool.Create)
 		{
@@ -44,7 +72,7 @@ public class LevelEditorSidebar : MonoBehaviour {
 			currentHeldObject = Instantiate(currentButton.createdObject);
 			currentHeldObject.Init(this);
 			currentHeldObject.transform.position = worldPos;
-			currentHeldObject.enabled = false;
+			
 			currentHeldObject.GetComponentInChildren<SpriteRenderer>().color = Color.red;
 		}
 	}
@@ -76,23 +104,13 @@ public class LevelEditorSidebar : MonoBehaviour {
 
 			for(int i = 0; i < levelObjects.Count; i++) 
 			{
-				var c2D = currentHeldObject.collider2D;
-				if(c2D.bounds.Intersects(levelObjects[i].collider2D.bounds)) 
+				var c2D = currentHeldObject.bc;
+				if(c2D.bounds.Intersects(levelObjects[i].bc.bounds)) 
 				{
 					overlap = true;
 					break;
 				}
 			}
-
-//			if (currentHeldObject.transform.position.x < Grid.instance.gridSize.x && currentHeldObject.transform.position.y < Grid.instance.gridSize.y)
-//			{
-//				bounds = true;
-//			}
-//			else
-//			{
-//				bounds = false;
-//			}
-
 
 			var objColor = Color.green;
 			if (overlap || !bounds)
@@ -136,7 +154,7 @@ public class LevelEditorSidebar : MonoBehaviour {
 	}
 
 	LevelObject Creator(int id){
-		var prefab = LevelObjectMap.instance.GetPrefab(id);
+		var prefab = LevelObjectMap.Instance.GetPrefab(id);
 		var obj = Instantiate(prefab);
 		obj.Init(this);
 		levelObjects.Add(obj);

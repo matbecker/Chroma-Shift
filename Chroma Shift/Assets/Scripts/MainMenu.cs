@@ -10,9 +10,11 @@ public class MainMenu : MonoBehaviour {
 	int currentScreen;
 	[SerializeField] Image[] backgroundImages;
 	[SerializeField] Animator[] animators;
+	[SerializeField] Animator titleAnim;
 	private float animTimer;
 	private bool delay;
 	private Coroutine delayCor;
+
 
 	void Start () 
 	{
@@ -66,7 +68,6 @@ public class MainMenu : MonoBehaviour {
 		case 3:
 			animators[currentScreen].SetBool("toMainMenu", false);
 			animators[newScreenIndex].SetBool("activated", true);
-
 			if (delayCor != null)
 			{
 				StopCoroutine(delayCor);
@@ -78,6 +79,14 @@ public class MainMenu : MonoBehaviour {
 		}
 		currentScreen = newScreenIndex;
 	}
+//	public void ShowTitle()
+//	{
+//		titleAnim.SetTrigger("appear");
+//	}
+//	public void HideTitle()
+//	{
+//		titleAnim.SetTrigger("dissappear");
+//	}
 	public IEnumerator DelayAnimation(float delayAmount, Animator anim, string animName, bool playAnim)
 	{
 		yield return new WaitForSeconds(delayAmount);

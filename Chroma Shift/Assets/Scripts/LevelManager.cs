@@ -4,6 +4,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEditor;
+using DG.Tweening;
+using DG.DemiLib;
 
 public class LevelManager : Photon.MonoBehaviour {
 
@@ -15,15 +18,22 @@ public class LevelManager : Photon.MonoBehaviour {
 		public float[] rankTimes;
 	}
 	[SerializeField] Levels[] levels;
+	public Dictionary<string,float> levelTimeDict;
 	private int levelIndex;
-	private float levelTimer;
+	public float levelTimer;
 	[SerializeField] Transform[] spawnPoints;
-	public const int levelBottom = -10;
+	public const int LEVEL_BOTTOM = -10;
+	public const int LEVEL_TOP = 10;
 	public SpawnPoint currentSpawnPoint;
+	public SpawnPoint startingPoint;
 	private int spawnPointIndex;
-	private bool isInit;
 
+	private Hero hero;
+	public bool restart;
+	public bool startTimer;
 	public Action<Hero> OnHeroSpawned;
+	public delegate void RestartLevel();
+	public event RestartLevel Restart;
 
 	private static LevelManager instance;
 	public static LevelManager Instance
@@ -42,8 +52,8 @@ public class LevelManager : Photon.MonoBehaviour {
 
 	private void Awake()
 	{
-		//spawnPointIndex = 0;
-		//spawnPoints[spawnPointIndex] = GameObject.FindGameObjectWithTag("Spawner").transform;
+		levelTimeDict = new Dictionary<string, float>();
+		levelIndex = LevelLoader.Instance.currentLevelId;
 		LevelLoader.Instance.OnLevelLoaded += OnLevelLoaded;
 	}
 
@@ -58,6 +68,8 @@ public class LevelManager : Photon.MonoBehaviour {
 			if(currentSpawnPoint == null || currentSpawnPoint.transform.position.x > ps.transform.position.x)
 			{
 				currentSpawnPoint = ps;
+				startingPoint = ps;
+
 			}
 		}
 		currentSpawnPoint.PlayHeroEntry();
@@ -78,11 +90,18 @@ public class LevelManager : Photon.MonoBehaviour {
 		} 
 		else
 		{
-			go = Instantiate(HeroManager.Instance.CurrentHeroPrefab, currentSpawnPoint.transform.position, Quaternion.identity) as GameObject;
-			var hero = go.GetComponent<Hero>();
+			if(hero == null)
+			{
+				go = Instantiate(HeroManager.Instance.CurrentHeroPrefab, currentSpawnPoint.transform.position, Quaternion.identity) as GameObject;
+				hero = go.GetComponentInChildren<Hero>();
 
-			hero.colour.currentColourType = HeroManager.Instance.currentColorType;
-			hero.colour.shadeIndex = HeroManager.Instance.currentShadeIndex;
+				hero.colour.currentColourType = HeroManager.Instance.currentColorType;
+				hero.colour.shadeIndex = HeroManager.Instance.currentShadeIndex;
+			}
+			else 
+			{
+				hero.transform.position = currentSpawnPoint.transform.position;
+			}
 
 			if(OnHeroSpawned != null) 
 			{
@@ -90,20 +109,90 @@ public class LevelManager : Photon.MonoBehaviour {
 			}
 			//PlayerUI.Instance.SetHero(hero);
 			//TODO play player animation
-			// hero.PlayIntro hero.OnSpawn whatev
+			hero.OnHeroSpawn();
 		}
+		ColourWheel.Instance.Shift();
+
+		startTimer = true;
 		//var h = go.GetComponent<Hero>();
+	}
 
+	public void NextLevel()
+	{
+		Save();
+		levelIndex++;
+		LevelLoader.Instance.LoadLevel(levels[levelIndex].name);
 
+		transform.DOScale(Vector3.one, 1.0f).OnComplete(() => {
+			PlayerUI.Instance.timerAnim.SetBool("finish", false);
+			hero.stats.currentHealth = hero.stats.maxHealth;
+			hero.grounded = false;
+			hero.GetComponent<Rigidbody2D>().velocity = Vector2.zero;
+		});
 
 	}
-	private void NextLevel()
+	public void FinishedLevel()
 	{
-		
+		var levelTime = levels[levelIndex].rankTimes[3] - levelTimer;
+		levelTimeDict.Add(levels[levelIndex].name, levelTime);
+
+		startTimer = false;
+	}
+	public void Save()
+	{
+		var path = Application.streamingAssetsPath + "/LevelTimes/levelTimes.txt";
+
+		if (path.Length != 0)
+		{
+			var sb = new System.Text.StringBuilder();
+
+			sb.AppendLine(GetSaveString());
+
+//			for (int i = 0; i < levelTimeDict.Count; i++)
+//			{
+//				
+//			}
+			System.IO.File.WriteAllText(path, sb.ToString());
+
+		}
+	}
+	public string GetSaveString()
+	{
+		return string.Join("_", new []{levels[levelIndex].name, levelTimeDict[levels[levelIndex].name].ToString()});
 	}
 	// Update is called once per frame
 	void Update () 
 	{
-		levelTimer -= Time.deltaTime;
+		if (startTimer)
+			levelTimer -= Time.deltaTime;
+
+		if (levelTimer < 10.0f)
+			PlayerUI.Instance.TimerFlash();
+		
+		if (levelTimer < 0.0f)
+		{
+			if (Restart != null)
+			{
+				currentSpawnPoint = startingPoint;
+				currentSpawnPoint.PlayHeroEntry();
+				ColourWheel.Instance.Shift();
+				Restart();
+				levelTimer = GetLevelTime();
+			}
+		}
+		if (restart && Restart != null)
+		{
+
+			currentSpawnPoint = startingPoint;
+			currentSpawnPoint.PlayHeroEntry();
+			ColourWheel.Instance.Shift();
+			Restart();
+			levelTimer = GetLevelTime();
+			restart = false;
+		}
+	}
+	public float GetLevelTime()
+	{
+		return levels[levelIndex].rankTimes[3];
 	}
 }

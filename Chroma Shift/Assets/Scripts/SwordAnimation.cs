@@ -3,41 +3,30 @@ using System.Collections;
 
 public class SwordAnimation : MonoBehaviour {
 
-	[SerializeField] CameraBehaviour cam;
 	[SerializeField] BoxCollider2D aoeTrigger;
-	private float shakeTimer;
+	[SerializeField] ParticleSystem[] swordFx;
+	[SerializeField] Hero swordsmen;
+	private bool startAOE;
 		
 	// Use this for initialization
 	void Start () 
 	{
-		cam = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<CameraBehaviour>();
+		swordsmen = GetComponentInParent<Swordsmen>();
 		aoeTrigger.enabled = false;
-	}
-	
-	// Update is called once per frame
-	void Update () 
-	{
-		if (shakeTimer > 0.0f)
-		{
-			Vector2 shakeAmount = Random.insideUnitCircle * 0.2f;
-			//shake the cameras position randomly by a small value 
-			cam.GetComponent<Transform>().position = new Vector3(cam.GetComponent<Transform>().position.x + shakeAmount.x, cam.GetComponent<Transform>().position.y + shakeAmount.y, cam.GetComponent<Transform>().position.z);
-
-			shakeTimer -= Time.deltaTime;
-		}
-		else
-			shakeTimer = 0.0f;
-	
+		swordFx[(int)swordsmen.colour.currentColourType].Stop();
 	}
 	public void StartAreaOfEffect()
 	{
-		//start the shaking effect
-		shakeTimer = 0.2f;
+		CameraBehaviour.Instance.Shake(0.2f,0.2f,0.2f, true);
+		startAOE = true;
+		swordFx[(int)swordsmen.colour.currentColourType].Play();	
 		aoeTrigger.enabled = true;
 	}
 
 	public void StopAreaOfEffect()
 	{
+		startAOE = false;
 		aoeTrigger.enabled = false;
+		swordFx[(int)swordsmen.colour.currentColourType].Stop();
 	}
 }

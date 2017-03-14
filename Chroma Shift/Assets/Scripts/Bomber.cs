@@ -1,8 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections;
+using DG.DemiLib;
+using DG.Tweening;
 
 public class Bomber : Enemy {
 
+	private bool grounded;
 	protected override void Awake()
 	{
 		base.Awake();
@@ -11,7 +14,7 @@ public class Bomber : Enemy {
 		//medium attack
 		stats.attackPower = Random.Range(1,4);
 		//fast movement
-		stats.movementSpeed = Random.Range(5,7);
+		stats.movementSpeed = Random.Range(4,7);
 	}
 	// Use this for initialization
 	protected override void Start () 
@@ -20,7 +23,6 @@ public class Bomber : Enemy {
 
 		type = EnemyType.Bomber;
 
-		SetSize();
 	}
 	protected override void Update()
 	{
@@ -28,18 +30,56 @@ public class Bomber : Enemy {
 	}	
 	protected override void FixedUpdate()
 	{
-		Move();
+		//start moving when on the ground
+		if (grounded)
+			Move();
 	}
 	protected override void Move()
 	{
-		base.Move();
+		direction = target.transform.position - transform.position;
+		direction.Normalize();
+		direction *= stats.movementSpeed;
+		rb.velocity = new Vector2(direction.x, rb.velocity.y);
 	}
 	protected override void OnCollisionEnter2D(Collision2D other)
 	{
-		if(!CheckExtraDamage(other))
-			if (other.collider.CompareTag("Player"))
-				other.gameObject.SendMessage("Damage", stats.attackPower, SendMessageOptions.DontRequireReceiver);
+		var ground = other.gameObject.GetComponent<GroundBlock>();
+		var hero = other.gameObject.GetComponent<Hero>();
+		var enemy = other.gameObject.GetComponent<Enemy>();
 
-		Death();
+		//bomber touched the ground
+		if (ground != null)
+		{
+			grounded = true;
+		}
+		if (enemy != null)
+		{
+			return;
+		}
+		if (ground == null)
+		{
+			
+			transform.DOScale(Vector3.one * 2f, 0.2f).OnComplete(() => {
+				Death();
+			});
+
+
+			if (hero != null)
+			{
+				var force = (hero.transform.position.x < transform.position.x) ? Vector2.left * 100.0f : Vector2.right * 100.0f;
+				hero.GetComponent<Rigidbody2D>().AddForce(force);
+			}
+		}
+
+
+		base.OnCollisionEnter2D(other);
+
+	}
+	protected override void Death ()
+	{
+		fx.Play();
+		fx.transform.parent = null;
+		Destroy(gameObject);
+		base.Death ();
 	}
 }

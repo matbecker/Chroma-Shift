@@ -40,6 +40,11 @@ public class HeroManager : MonoBehaviour {
 	void Awake()
 	{
 		DontDestroyOnLoad(gameObject);
+
+		if (FindObjectsOfType(GetType()).Length > 1)
+		{
+			Destroy(gameObject);
+		}
 	}
 
 }

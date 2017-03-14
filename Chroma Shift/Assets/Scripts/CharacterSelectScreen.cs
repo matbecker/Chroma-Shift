@@ -22,11 +22,11 @@ public class CharacterSelectScreen : Photon.MonoBehaviour {
 			{
 				var go = Instantiate(hero.prefab, heroPosition) as GameObject;
 				go.SetActive(false);
-				var h = go.GetComponent<Hero>();
+				var h = go.GetComponentInChildren<Hero>();
 				h.enabled = false;
 				h.SetupSprite();
 				h.stats.colourShifts = 100;
-				go.GetComponent<Rigidbody2D>().gravityScale = 0;
+				go.GetComponentInChildren<Rigidbody2D>().gravityScale = 0;
 				go.transform.localPosition = hero.selectScreenPosition;
 				go.transform.localScale = new Vector3(100.0f,100.0f,1.0f);
 				go.GetComponentInChildren<Canvas>().enabled = false;
@@ -70,18 +70,18 @@ public class CharacterSelectScreen : Photon.MonoBehaviour {
 	public void NextColour()
 	{
 		if (isFocusedScreen)
-			characters[currentHero].GetComponent<Hero>().SwitchColour();
+			characters[currentHero].GetComponentInChildren<Hero>().SwitchColour();
 	}
 	public void NextShade()
 	{
 		if (isFocusedScreen)
-			characters[currentHero].GetComponent<Hero>().SwitchShade();
+			characters[currentHero].GetComponentInChildren<Hero>().SwitchShade();
 	}
 	public void StartGame()
 	{
 		if (isFocusedScreen)
 		{
-			var colour = characters[currentHero].GetComponent<ColourManager>();
+			var colour = characters[currentHero].GetComponentInChildren<ColourManager>();
 			HeroManager.Instance.currentColorType = colour.currentColourType;
 			HeroManager.Instance.currentShadeIndex = colour.shadeIndex;
 

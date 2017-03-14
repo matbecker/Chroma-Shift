@@ -1,17 +1,20 @@
 ﻿using UnityEngine;
 using System.Collections;
+using DG.DemiLib;
+using DG.Tweening;
 
 public class Ninja : Hero {
 
 	[SerializeField] private bool canDoubleJump;
 	[SerializeField] GameObject dagger;
 	[SerializeField] SpriteRenderer headband;
-	[SerializeField] float invisibleDuration;
-	[SerializeField] float lerpDuration;
 	[SerializeField] BoxCollider2D swordTrigger;
-	private float startLerpTimer;
-	private float endLerpTimer;
+	[SerializeField] ParticleSystem ps;
+	private float blockTimer;
 	private bool freezeBlock;
+	private bool onFire;
+	private bool shake;
+	private float shakeTimer;
 
 
 	protected override void Start ()
@@ -20,9 +23,6 @@ public class Ninja : Hero {
 
 		if (photonView.isMine)
 			InputManager.Instance.DoubleJump += DoubleJump;
-
-		//ninja cannot see his shield timer
-		shieldBar.enabled = false;
 	}
 
 	protected override void OnDestroy ()
@@ -39,33 +39,28 @@ public class Ninja : Hero {
 	{
 		base.Update ();
 
-		if (startShieldTimer)
+		if (!startShieldTimer)
 		{
-			//make the ninja sprite dissapear
-			sprite.color = Color.Lerp(sprite.color, Color.clear, startLerpTimer);
-			//make the headband sprite dissapear
-			headband.color = Color.Lerp(headband.color, Color.clear, startLerpTimer);
-			//make the dagger dissapear
-			dagger.SetActive(false);
-
-			startLerpTimer += Time.deltaTime / lerpDuration;
-		}
-		else
-		{
-			freezeBlock = false;
-			//make the ninja sprite reappear
-			sprite.color = Color.Lerp(Color.clear, colour.GetCurrentColor(), endLerpTimer);
-			//make the headband sprite reappear
-			headband.color = Color.Lerp(Color.clear, Color.black, endLerpTimer);
-			//make the dagger reappear
+			onFire = false;
+			ps.Stop();
+			sprite.DOColor(colour.GetCurrentColor(), 0.2f);
+			headband.DOColor(Color.black, 0.2f);
 			dagger.SetActive(true);
-
-			endLerpTimer += Time.deltaTime / lerpDuration;
 		}
-		if (isAttacking)
-			swordTrigger.enabled = true;
+		if (freezeBlock)
+		{
+			blockTimer += Time.deltaTime;
+			stats.shieldCapacity = 4.0f;
+
+			if (blockTimer > stats.shieldCapacity)
+				freezeBlock = false;
+		}
 		else
-			swordTrigger.enabled = false;
+		{
+			stats.shieldCapacity = 0.2f;
+		}
+
+		swordTrigger.enabled = (isAttacking) ? true : false;
 	}
 
 	protected override void Attack ()
@@ -81,7 +76,7 @@ public class Ninja : Hero {
 	//method for playing the attack animation
 	[PunRPC] private void PlayAttackAnimation()
 	{
-		anim.SetBool("isAttacking", true);
+		weaponAnim.SetBool("isAttacking", true);
 	}
 
 	[PunRPC] protected override void Block ()
@@ -91,30 +86,49 @@ public class Ninja : Hero {
 		//dont allow the player to reset the LerpTimer if they are currently blocking
 		if (!freezeBlock && canBlock)
 		{
-			startLerpTimer = 0.0f;
-			endLerpTimer = 0.0f;
+			stats.shieldCapacity = 0.5f;
+			ps.Play();
+			sprite.DOColor(Color.clear, 0.2f);
+			headband.DOColor(Color.clear, 0.2f);
+			dagger.SetActive(false);
+			onFire = true;
+			freezeBlock = true;
+			blockTimer = 0.0f;
 		}
-		freezeBlock = true;
 	}
-	private void OnCollisionExit2D (Collision2D other)
+	protected override void OnCollisionExit2D (Collision2D other)
 	{
-		//if the player has left the ground layer they can double jump
-		if (!grounded)
+		base.OnCollisionExit2D(other);
+
+		if (grounded)
 			canDoubleJump = true;
 	}
 	protected override void OnCollisionEnter2D (Collision2D other)
 	{
 		base.OnCollisionEnter2D(other);
-
 		canDoubleJump = false;
+
+		var enemy = other.gameObject.GetComponent<Enemy>();
+
+		if (enemy != null && onFire)
+		{
+			CameraBehaviour.Instance.Shake(0.2f,0.2f,0.2f,true);
+			other.gameObject.SendMessage("Damage", 10, SendMessageOptions.DontRequireReceiver);
+			onFire = false;
+		}
 	}
 	private void DoubleJump()
 	{
 		//if the player can double jump
-		if (canDoubleJump)
+		if (!grounded && canDoubleJump)
 		{
+			transform.DORotate(new Vector3(0.0f, 0.0f,360.0f), 0.5f,RotateMode.FastBeyond360);
+
+			rb.velocity = new Vector2(rb.velocity.x, 0.0f);
+
+			var force = (rb.gravityScale > 0) ? stats.jumpForce : -stats.jumpForce;
 			//apply a force in the y direction once again
-			rb.AddForce(stats.jumpForce);
+			rb.AddForce(force);
 			//set the canDoubleJump variable to false to ensure the player cannot jump a third time
 			canDoubleJump = false;
 		}

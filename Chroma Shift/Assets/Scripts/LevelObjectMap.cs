@@ -3,25 +3,44 @@ using System.Collections;
 using System.Collections.Generic;
 
 public class LevelObjectMap : MonoBehaviour {
+	
 	[System.Serializable]
-	public class ObjectPair {
+	public class ObjectPair 
+	{
 		public int objectID;
 		public LevelObject obj;
+	}
+	private static LevelObjectMap instance;
+	public static LevelObjectMap Instance
+	{
+		get
+		{
+			if (!instance)
+				instance = GameObject.FindObjectOfType(typeof(LevelObjectMap)) as LevelObjectMap;
+
+			return instance;
+		}
 	}
 
 	public ObjectPair[] objectMap;
 	private Dictionary<int, LevelObject> objectDict;
 
-	public static LevelObjectMap instance;
+	public void Awake() 
+	{
+		DontDestroyOnLoad(gameObject);
 
-	public void Awake() {
-		instance = this;
+		if (FindObjectsOfType(GetType()).Length > 1)
+		{
+			Destroy(gameObject);
+		}
+
 		objectDict = new Dictionary<int, LevelObject>();
 
 		for(int i = 0; i < objectMap.Length; i++) 
 		{
 			objectDict.Add(objectMap[i].objectID, objectMap[i].obj);
 		}
+
 	}
 
 	public LevelObject GetPrefab(int objId)

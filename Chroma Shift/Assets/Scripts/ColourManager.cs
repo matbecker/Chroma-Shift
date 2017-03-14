@@ -14,7 +14,7 @@ public class ColourManager : MonoBehaviour {
 	public class ColorContainer
 	{
 		public ColourType type;
-		public Color[] colors;
+		public Color[] color;
 	}
 	//Container that has all the colors in it
 	public ColorContainer[] colors;
@@ -46,12 +46,25 @@ public class ColourManager : MonoBehaviour {
 	public Color GetCurrentColor()
 	{
 		var a = (int)currentColourType;
-		var b = shadeIndex % colors[a].colors.Length;
+		var b = shadeIndex % colors[a].color.Length;
 		//c = the current shade of the current color 
-		var c = colors[a].colors[b];
+		var c = colors[a].color[b];
 		//always ensure the alpha is full
 		c.a = 1;
 		return c;
+	}
+	public Color GetRandomColor(ColourType otherColour)
+	{
+		currentColourType = (ColourType)UnityEngine.Random.Range(0, 6);
+		shadeIndex = UnityEngine.Random.Range(0, 6);
+		var newColour = colors[(int)currentColourType];
+
+		while(newColour.type == otherColour)
+		{
+			currentColourType = (ColourType)UnityEngine.Random.Range(0, 6);
+			newColour = colors[(int)currentColourType];
+		}
+		return newColour.color[shadeIndex];
 	}
 
 }

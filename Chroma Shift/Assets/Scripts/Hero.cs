@@ -2,15 +2,16 @@
 using System.Collections;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using DG.DemiLib;
+using DG.Tweening;
 
-public class Hero : Photon.MonoBehaviour {
+public class Hero : Photon.MonoBehaviour, IProjectileIgnore {
 
 	public enum Type { Archer, Ninja, Swordsmen, Wizard };
 
 	[System.Serializable]
 	public class Stats
 	{
-		public int lives;
 		public int currentHealth;
 		public int maxHealth;
 		public int attackPower;
@@ -32,27 +33,29 @@ public class Hero : Photon.MonoBehaviour {
 	[SerializeField] protected EdgeCollider2D edgeCol;
 	[SerializeField] protected BoxCollider2D boxCol;
 	[SerializeField] protected Image shieldBar;
-	[SerializeField] protected SpriteRenderer sprite;
+	[SerializeField] public SpriteRenderer sprite;
 	[SerializeField] protected GameObject projectile;
 	[SerializeField] protected GameObject tmpProjectile;
 	[SerializeField] protected Animator anim;
+	[SerializeField] protected Animator weaponAnim;
 	[SerializeField] protected bool depleteOnHit;
 	[SerializeField] protected bool rangedAttack;
 	protected bool startShieldTimer;
 	protected bool canBlock;
 	protected bool isBlocking;
-	protected bool grounded;
+	public bool grounded;
 	private bool canAttack;
 	public bool isAttacking;
 	private bool rechargeShield;
 	protected bool disableInput;
-	protected bool facingRight;
+	public bool facingRight;
 	protected bool isInvinsible;
 	protected bool isDamaged;
 	public bool isFollowTarget;
 	private float timer;
 	private float CooldownTimer;
 	private Coroutine transparencyCor;
+	private bool sliding;
 
 	//Online Synchronization variables
 	private float lastSynchronizationTime = 0f;
@@ -68,8 +71,6 @@ public class Hero : Photon.MonoBehaviour {
 
 		if (photonView.isMine || PhotonNetwork.offlineMode)
 			isFollowTarget = true;
-
-		DontDestroyOnLoad(gameObject);
 	}
 	protected virtual void Start () 
 	{
@@ -83,6 +84,7 @@ public class Hero : Photon.MonoBehaviour {
 			InputManager.Instance.UnBlock += UnBlock;
 			InputManager.Instance.SwitchColour += SwitchColour;
 			InputManager.Instance.SwitchShade += SwitchShade;
+			LevelManager.Instance.Restart += RestartLevel;
 		}
 		isDamaged = true;
 		//get the rigidbody of the gameobject
@@ -121,6 +123,7 @@ public class Hero : Photon.MonoBehaviour {
 			//dont worry about the other players gravity
 			rb.gravityScale = 0;
 		}
+		transform.DOScale(new Vector3(1.1f,1.1f,1.0f), 0.1f);
 		//if (photonView.isMine || PhotonNetwork.offlineMode)
 		
 		//isFollowTarget = true;
@@ -130,9 +133,6 @@ public class Hero : Photon.MonoBehaviour {
 
 	public void SetupSprite()
 	{
-		colour = gameObject.GetComponent<ColourManager>();
-		//Get the sprite renderer component
-		sprite = gameObject.GetComponent<SpriteRenderer>();
 		//set the color to the players colour 
 		sprite.color = colour.GetCurrentColor();
 	}
@@ -188,6 +188,7 @@ public class Hero : Photon.MonoBehaviour {
 		//lerp position towards where the player is headed over the network
 		rb.position = Vector3.Lerp(syncStartPosition, syncEndPosition, syncTime / syncDelay);
 	}
+
 
 	// Update is called once per frame
 	protected virtual void Update () 
@@ -265,11 +266,11 @@ public class Hero : Photon.MonoBehaviour {
 		if (isDamaged)
 		{
 			CooldownTimer += Time.deltaTime;
-
+			//anim.speed += 0.01f;
 			if (CooldownTimer > stats.damageCooldownTime)
 			{
+				anim.SetBool("hurt", false);
 				isDamaged = false;
-				CooldownTimer = 0.0f;
 			}
 		}
 		//make the x scale of the shield bar image equal the heros current shield strength / their max shield strength (value between 0-1)
@@ -277,9 +278,22 @@ public class Hero : Photon.MonoBehaviour {
 
 		if (rb.velocity.y > stats.maxVelocity.y)
 			rb.velocity = new Vector2(rb.velocity.x, stats.maxVelocity.y);
+		else if (rb.velocity.y < -stats.maxVelocity.y)
+			rb.velocity = new Vector2(rb.velocity.x, -stats.maxVelocity.y);
 
-		if (transform.position.y < LevelManager.levelBottom || stats.currentHealth <= 0)
-			Death();
+		if (rb.velocity.x > stats.maxVelocity.x)
+			rb.velocity = new Vector2(stats.maxVelocity.x, rb.velocity.y);
+		else if (rb.velocity.x < -stats.maxVelocity.x)
+			rb.velocity = new Vector2(-stats.maxVelocity.x, rb.velocity.y);
+
+
+
+		if (transform.position.y < LevelManager.LEVEL_BOTTOM || transform.position.y > LevelManager.LEVEL_TOP)
+			Respawn(10.0f);
+
+		if (stats.currentHealth <= 0)
+			Respawn(20.0f);
+
 	}
 	private void CheckShieldFull()
 	{
@@ -309,13 +323,14 @@ public class Hero : Photon.MonoBehaviour {
 			if (!isBlocking)
 			{
 				//if the player is on the ground layer then apply a force in the y direction
-				if (HelperFunctions.GroundCheck(edgeCol))
-					rb.AddForce(stats.jumpForce);
-
-				grounded = false;
-
-				if (rb.velocity.y > stats.maxVelocity.y)
-					rb.velocity = new Vector2(rb.velocity.x, stats.maxVelocity.y);
+				if (grounded) 
+				{
+					var force = (rb.gravityScale == 1) ? stats.jumpForce : -stats.jumpForce;
+					rb.AddForce(force);
+					transform.DOScaleZ(1.0f, 0.1f).OnComplete(() => {
+						grounded = false;
+					});
+				}
 			}
 		}
 	}
@@ -326,26 +341,15 @@ public class Hero : Photon.MonoBehaviour {
 			//if the player is not blocking
 			if (!isBlocking)
 			{
-				if (horizontalAxis > 0)
+				if (horizontalAxis != 0)
 				{
-					rb.AddForce(stats.movementForce);
-					facingRight = true;
-					//limit player velocity in right direction
-					if (rb.velocity.x > stats.maxVelocity.x)
-						rb.velocity = new Vector2(stats.maxVelocity.x, rb.velocity.y);
-				}
-				if (horizontalAxis < 0)
-				{
-					rb.AddForce(-stats.movementForce);
-					facingRight = false;
-					//limit players velocity in left direction
-					if (rb.velocity.x < -stats.maxVelocity.x) 
-						rb.velocity = new Vector2(-stats.maxVelocity.x, rb.velocity.y);
+					Vector2 dir = (horizontalAxis > 0) ? stats.movementForce : -stats.movementForce;
+					facingRight = (horizontalAxis > 0) ? true : false;
+					rb.AddForce(dir);
 				}
 			}
-			HelperFunctions.FlipScaleX(gameObject, facingRight);
+			HelperFunctions.FlipScale(gameObject, facingRight);
 		}
-
 	}
 	//method to call the attack method when all the inside requirements are met
 	private void TryAttack()
@@ -354,10 +358,9 @@ public class Hero : Photon.MonoBehaviour {
 		if (!disableInput)
 		{
 			//if the player is not blocking they can attack and they havent already attacked
-			if (!isBlocking && canAttack && !isAttacking)
+			if (!isBlocking && canAttack && !isAttacking && !sliding)
 			{
 				Attack();
-
 				//the hero has attacked and will not be able to again until their cooldown is satisfied
 				isAttacking = true;
 			}
@@ -375,18 +378,18 @@ public class Hero : Photon.MonoBehaviour {
 
 		//stop sword animations
 		if (!rangedAttack)
-			anim.SetBool("isAttacking", false);
+			weaponAnim.SetBool("isAttacking", false);
 
 		disableInput = false;
 	}
-	//method to call the block functiomn when all the requirements are satisfied
+	//method to call the block function when all the requirements are satisfied
 	private void TryBlock()
 	{
 		//if the player has input
 		if (!disableInput)
 		{
 			//if the player is not attacking and they can block
-			if (!isAttacking && canBlock)
+			if (!isAttacking && canBlock && !sliding)
 			{
 				Block();
 
@@ -456,54 +459,91 @@ public class Hero : Photon.MonoBehaviour {
 			transparencyCor = StartCoroutine(HelperFunctions.TransitionTransparency(shieldBar, 0.1f));
 		}
 	}
-	private void Death()
+	private void Respawn(float timePenalty)
 	{
-		stats.lives--;
-
+		sliding = false;
 		stats.currentHealth = stats.maxHealth;
-
 		transform.position = LevelManager.Instance.currentSpawnPoint.transform.position;
-		//if a hero has no lives and there are more than one hero
-		if (stats.lives == 0 && HeroManager.Instance.heroes.Length > 1)
-		{
-			//change the camera target
-			UpdateCameraTarget();
-		}
-
+		rb.velocity = Vector2.zero;
+		OnHeroSpawn();
 		EnemySpawner.ClearEnemies();
-
-		PlayerUI.Instance.SetLifeText();
-
-//		if (stats.lives <= 0)
-//		{
-//			SceneManager.LoadScene("Level1");
-//		}
+		LevelManager.Instance.levelTimer -= timePenalty;
+		PlayerUI.Instance.TimerFlash();
+		StarBehaviour.Instance.ChangeDuration(timePenalty);
+	}
+	private void RestartLevel()
+	{
+		sliding = false;
+		stats.colourShifts = 1;
+		stats.currentHealth = stats.maxHealth;
+		transform.position = LevelManager.Instance.currentSpawnPoint.transform.position;
+		rb.velocity = Vector2.zero;
+		OnHeroSpawn();
+	}
+	public void OnHeroSpawn()
+	{
+		anim.SetTrigger("onHeroEntry");
+		CameraBehaviour.Instance.atEnd = false;
+	}
+	public void DisableGravity()
+	{
+		rb.velocity = Vector2.zero;
+		rb.gravityScale = 0.0f;
+	}
+	public void EnableGravity()
+	{
+		rb.gravityScale = 1.0f;
 	}
 	private void UpdateCameraTarget()
 	{
 	}
+	protected virtual void OnCollisionExit2D(Collision2D other) 
+	{ 
+		sliding = false;
+	}
+
 	protected virtual void OnCollisionEnter2D(Collision2D other)
 	{
-		if (other.collider.CompareTag("Enemy") && isBlocking && canBlock)
+		var enemy = other.gameObject.GetComponent<Enemy>();
+
+		if (enemy != null && isBlocking && canBlock)
 		{
 			other.gameObject.SendMessage("Damage", 2, SendMessageOptions.DontRequireReceiver);
 
 			stats.currentShieldStrength -= 2.0f;
 		}
+
 		if (other.collider.CompareTag("ShiftPowerUp") && stats.colourShifts < 5)
 		{
 			stats.colourShifts++;
 			Destroy(other.gameObject);
 		}
-		if (HelperFunctions.GroundCheck(edgeCol))
+	}
+	protected virtual void OnCollisionStay2D(Collision2D other)
+	{
+		if (HelperFunctions.GroundCheck(edgeCol, rb))
+		{
 			grounded = true;
+			sliding = false;
+		}
+			
+		if (HelperFunctions.WallCheck(boxCol, transform, facingRight) && other.collider.CompareTag("StickyPlatform"))
+		{
+			float slider = Input.GetAxis("Vertical");
 
+			if (slider != 0)
+			{
+				sliding = true;
+				var force = (slider > 0) ? Vector2.up * 5.0f : Vector2.down * 5.0f;
+				edgeCol.enabled = false;
+				rb.AddForce(force);
+			}
+		}
 	}
 
 	//method for switching the players colour
 	[PunRPC] public void SwitchColour()
 	{
-		
 		if (stats.colourShifts != 0)
 		{
 			stats.colourShifts--;
@@ -511,16 +551,14 @@ public class Hero : Photon.MonoBehaviour {
 			colour.NextColour();
 
 			//set the sprites colour to equal what the new colour is
-			sprite.color = colour.GetCurrentColor();
+			sprite.DOColor(colour.GetCurrentColor(), 0.5f);
 
 			//call the switch colour method over the network so players can see each others colour
 			if(photonView.isMine)
 				photonView.RPC("SwitchColour", PhotonTargets.OthersBuffered);
 		}
-
-
-		//sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
 	}
+
 	//method for switching the players shade
 	[PunRPC] public void SwitchShade()
 	{
@@ -528,21 +566,25 @@ public class Hero : Photon.MonoBehaviour {
 		colour.NextShade();
 
 		//set the colour of the shade to equal what the new shade is 
-		sprite.color = colour.GetCurrentColor();
+		sprite.DOColor(colour.GetCurrentColor(), 0.5f);
 
 		//call the switch shade method so the players can see each others shades
 		if(photonView.isMine)
 			photonView.RPC("SwitchShade", PhotonTargets.OthersBuffered);
-
-		//sprite.color = Color.Lerp(sprite.color, colour.GetCurrentColor(), 0.5f);
 	}
-	protected virtual void Damage(int damageAmount)
+	public virtual void Damage(int damageAmount)
 	{
 		//only damage the hero if they arent blocking or arent invisible
-		if (depleteOnHit && !isBlocking || !depleteOnHit && !isInvinsible || !isDamaged)
+		if (depleteOnHit && !isBlocking && !isDamaged || !depleteOnHit && !isInvinsible && !isDamaged)
 		{
-			isDamaged = true;
 			stats.currentHealth -= damageAmount;
+			CooldownTimer = 0.0f;
+			anim.SetBool("hurt", true);
+			isDamaged = true;
 		}
+	}
+	public void DisplayLoadingScreen()
+	{
+		LoadingScreen.Instance.DisplayLoadingScreen(true);
 	}
 }

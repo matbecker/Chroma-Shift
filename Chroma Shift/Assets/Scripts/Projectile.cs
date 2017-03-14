@@ -10,53 +10,54 @@ public class Projectile : MonoBehaviour {
 	[SerializeField] Vector2 force;
 	[SerializeField] Vector2 acceleration;
 	[SerializeField] Vector2 intialVelocity;
-	[SerializeField] GameObject hero;
-	private bool alive;
+	public Hero hero;
+	[SerializeField] ParticleSystem[] projectileFx;
+	private Vector2 hitPoint;
 
-	// Use this for initialization
-	void Start () 
-	{
-		alive = true;
+	void Start() {
+		projectileFx[(int)hero.colour.currentColourType].Play();
 	}
-	
 	// Update is called once per frame
 	void Update () 
 	{
-		if (alive)
-			hero = GameObject.FindGameObjectWithTag("Player");
+
+		switch (type)
+		{
+		case ProjectileType.Arrow:
+			var angle = Mathf.Atan2(rb.velocity.y, rb.velocity.x);
+			angle = angle * Mathf.Rad2Deg;
+			transform.localRotation = Quaternion.Euler(0, 0, angle);
+			break;
+		case ProjectileType.Magic:
+			break;
+		default:
+			break;
+		}
 	}
+
 	void OnTriggerEnter2D(Collider2D other)
 	{
-		var h = hero.GetComponent<Hero>();
-		if (other.CompareTag("Enemy"))
-		{
-			//if the enemy is the same colour as me damage them critically 
-			if (HelperFunctions.IsSameColour(h.colour.currentColourType, other.GetComponent<Enemy>().colour.currentColourType))
-			{
-				other.SendMessage("Damage", 10, SendMessageOptions.DontRequireReceiver);
-				Debug.Log("++");
-			}
-			else
-			{
-				switch (type)
-				{
-				case ProjectileType.Arrow:
-					other.SendMessage("Damage", h.stats.attackPower, SendMessageOptions.DontRequireReceiver);
-					Destroy(gameObject);
-					break;
-				case ProjectileType.Magic:
-					other.SendMessage("Damage", h.stats.attackPower, SendMessageOptions.DontRequireReceiver);
-					Destroy(gameObject);
-					break;
-				default:
-					break;
-				}
-			}
-//			Debug.Log(hero.GetComponent<Hero>().stats.attackPower);
+		if (other.GetComponent<IProjectileIgnore>() != null)
+			return;
+		
+		var damage = hero.stats.attackPower;
+
+		var enemy = other.GetComponent<Enemy>();
+		if (enemy != null && HelperFunctions.IsSameColour(hero.colour.currentColourType, enemy.colour.currentColourType))
+			damage = 10;
+
+		var dmg = other.GetComponent<IDamageable>();
+		if(dmg != null) {
+			dmg.Damage(damage);
 		}
-		if (((1 << other.gameObject.layer) & HelperFunctions.collidableLayers) != 0)
+
+		projectileFx[(int)hero.colour.currentColourType].transform.parent = null;
+		projectileFx[(int)hero.colour.currentColourType].Stop();
+		for (int i = 0; i < projectileFx.Length; i++)
 		{
-			Destroy(gameObject);
+			Destroy(projectileFx[i], 4.0f);
 		}
+		Debug.Log(other.gameObject.name);
+		Destroy(gameObject);
 	}
 }

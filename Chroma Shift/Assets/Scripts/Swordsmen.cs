@@ -25,39 +25,30 @@ public class Swordsmen : Hero {
 		//call the play attack animation over the network
 		if (photonView.isMine)
 			photonView.RPC("PlayAttackAnimation", PhotonTargets.Others);
-		
-		RaycastHit2D hit = Physics2D.Raycast(transform.position + boxCol.bounds.extents, Vector2.right, stats.attackRange, HelperFunctions.collidableLayers);
-
-		if (hit.collider != null)
-			hit.collider.gameObject.SendMessage("Damage", stats.attackPower, SendMessageOptions.DontRequireReceiver);
 	}
 	//method for playing the ninjas attack animation
 	[PunRPC] private void PlayAttackAnimation()
 	{
-		anim.SetBool("isAttacking", true);
+		weaponAnim.SetBool("isAttacking", true);
 	}
 	//swordsmens block consists of a block animation
 	[PunRPC] protected override void Block ()
 	{
 		base.Block ();
-		anim.SetBool("isBlocking", true);
+		weaponAnim.SetBool("isBlocking", true);
 	}
 	//swordsmens finished blocking consists of stopping the block animation
 	[PunRPC] protected override void FinishedBlocking()
 	{
 		base.FinishedBlocking();
-		anim.SetBool("isBlocking", false);
+		weaponAnim.SetBool("isBlocking", false);
 	}
-
+		
 	protected override void Update ()
 	{
 		base.Update ();
 
-		if (canBlock)
-		{
-			sword.SetActive(true);
-		}
-		else
-			sword.SetActive(false);
+		var block = (canBlock) ? true : false;
+		sword.SetActive(block);
 	}
 }

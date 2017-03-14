@@ -3,12 +3,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using System.Linq;
+using DG.DemiLib;
+using DG.Tweening;
 
-public class EnemySpawner : LevelObject {
+public class EnemySpawner : LevelObject, IProjectileIgnore {
 
 	[SerializeField] int minEnemies;
 	[SerializeField] int maxEnemies;
-	public static List<GameObject> enemyWave;
+	public static List<Enemy> enemyWave;
 	[SerializeField] GameObject[] barriers;
 	public bool hasWaveStarted;
 	private bool isWaveOver;
@@ -16,36 +18,42 @@ public class EnemySpawner : LevelObject {
 	private float startLerpTimer;
 	private float endLerpTimer;
 	[SerializeField] float lerpDuration;
-	[SerializeField] Text enemyWaveCountBottomText;
-	[SerializeField] Text enemyWaveCountTopText;
 	[SerializeField] int spawnCircleWidth;
 	[SerializeField] int spawnCircleHeight;
 	[SerializeField] Enemy[] enemyTypes;
 	[SerializeField] GameObject spawnerManager;
+	[SerializeField] BoxCollider2D trigger;
+	[SerializeField] ParticleSystem[] enemyParticles;
 
 	// Use this for initialization
 	void Awake()
 	{
 		if (!inEditor)
+		{
 			spawnerManager = GameObject.FindGameObjectWithTag("EnemySpawnerManager");
+		}
+			
 	}
 	void Start () 
 	{
 		hasWaveStarted = false;
 
-		enemyWave = new List<GameObject>();
+		enemyWave = new List<Enemy>();
 
-		for (int i = 0; i < barriers.Length; i++)
-		{
-			barriers[i].GetComponent<SpriteRenderer>().color = Color.clear;
-			barriers[i].GetComponent<BoxCollider2D>().enabled = false;
-		}
+		barriers[0].GetComponent<SpriteRenderer>().color = Color.clear;
+		barriers[0].GetComponent<BoxCollider2D>().enabled = false;
 
-		enemyWaveCountBottomText.color = Color.clear;
-		enemyWaveCountTopText.color = Color.clear;
 
 		if (!inEditor)
 			transform.parent = spawnerManager.transform;
+
+		LevelManager.Instance.Restart += RestartLevel;
+	}
+
+	void OnDestroy() 
+	{
+		if (LevelManager.Instance)
+			LevelManager.Instance.Restart -= RestartLevel;
 	}
 	
 	void OnTriggerEnter2D(Collider2D other)
@@ -54,8 +62,12 @@ public class EnemySpawner : LevelObject {
 		{
 			for (int i = 0; i < barriers.Length; i++)
 			{
+				var s = barriers[i].GetComponent<SpriteRenderer>();
+				s.DOColor(Color.black, 2.0f);
 				barriers[i].GetComponent<BoxCollider2D>().enabled = true;
 			}
+			PlayerUI.Instance.currentEnemiesBottom.DOColor(Color.black, 2.0f);
+			PlayerUI.Instance.currentEnemiesTop.DOColor(Color.white, 2.0f);
 
 			//get a random number of enemies to spawn based on the min and max provided
 			int enemyCount = Random.Range(minEnemies, maxEnemies);
@@ -63,63 +75,57 @@ public class EnemySpawner : LevelObject {
 			//loop through as many times as the enemy count returned
 			for (int i = 0; i <= enemyCount; i++)
 			{
+				//index
 				int enemyType = Random.Range(0,enemyTypes.Length);
 
 				//instantiate a random enemy type at the enemyspawner location
-				GameObject enemyObj = Instantiate(enemyTypes[enemyType], transform.position + new Vector3(Random.insideUnitCircle.x * spawnCircleWidth, Random.insideUnitCircle.y * spawnCircleHeight, transform.position.z), Quaternion.identity) as GameObject;
+				Enemy enemyObj = Instantiate(enemyTypes[enemyType], transform.position + new Vector3(Random.insideUnitCircle.x * spawnCircleWidth, Random.insideUnitCircle.y * spawnCircleHeight, transform.position.z), Quaternion.identity) as Enemy;
 				//add the enemy to the wave list
 				enemyWave.Add(enemyObj);
 			}
 			hasWaveStarted = true;
+			//cannot pause while inside a wave
+			PauseOverlay.Instance.canPause = false;
 		}
 	}
 	void Update()
 	{
 		if (hasWaveStarted)
 		{
-			for (int i = 0; i < barriers.Length; i++)
-			{
-				//HelperFunctions.ColourLerp(barriers[i], Color.clear, Color.white, 0.1f, startLerpTimer);
-				barriers[i].GetComponent<SpriteRenderer>().color = Color.Lerp(Color.clear, Color.white, startLerpTimer);
-			}
-
-			enemyWaveCountBottomText.color = Color.Lerp(Color.clear,Color.black, startLerpTimer);
-			enemyWaveCountTopText.color = Color.Lerp(Color.clear,Color.white, startLerpTimer);
-			enemyWaveCountBottomText.text = enemyWave.Count.ToString();
-			enemyWaveCountTopText.text = enemyWave.Count.ToString();
-			startLerpTimer += Time.deltaTime / lerpDuration;
+			
+			PlayerUI.Instance.currentEnemiesBottom.text = enemyWave.Count.ToString();
+			PlayerUI.Instance.currentEnemiesTop.text = enemyWave.Count.ToString();
 		}
 		if (hasWaveStarted && enemyWave.Count == 0)
 		{
 			for (int i = 0; i < barriers.Length; i++)
 			{
-				//HelperFunctions.ColourLerp(barriers[i], Color.white, Color.clear, 0.1f, endLerpTimer);
-				barriers[i].GetComponent<SpriteRenderer>().color = Color.Lerp(Color.white, Color.clear, endLerpTimer);
+				//barriers[i].GetComponent<SpriteRenderer>().DOColor(Color.clear, 2.0f);
+				var s = barriers[i].GetComponent<SpriteRenderer>();
+				s.DOColor(Color.black, 2.0f);
 				barriers[i].GetComponent<BoxCollider2D>().enabled = false;
 			}
-			enemyWaveCountBottomText.color = Color.Lerp(Color.black,Color.clear, endLerpTimer);
-			enemyWaveCountTopText.color = Color.Lerp(Color.white,Color.clear, endLerpTimer);
+			PlayerUI.Instance.currentEnemiesBottom.DOColor(Color.clear, 2.0f);
+			PlayerUI.Instance.currentEnemiesTop.DOColor(Color.clear, 2.0f);
 
-			endLerpTimer += Time.deltaTime / lerpDuration;
+			float rand = Random.value;
 
-			if (endLerpTimer > lerpDuration)
-			{
-				float rand = Random.value;
+			if (rand > 0.5f)
+				ColourWheel.Instance.Shift();
 
-				if (rand > 0.5f)
-					ColourWheel.Instance.Shift();
-
-				gameObject.SetActive(false);
-			}
+			gameObject.SetActive(false);
+			hasWaveStarted = false;
+			PauseOverlay.Instance.canPause = true;
 		}
+
 	}
 	public static void ClearEnemies()
 	{
 		if(enemyWave != null) 
 		{
-			foreach (GameObject enemy in enemyWave)
+			foreach (Enemy enemy in enemyWave)
 			{
-				Destroy(enemy);
+				Destroy(enemy.gameObject);
 			}
 			enemyWave.Clear();
 		}
@@ -146,6 +152,7 @@ public class EnemySpawner : LevelObject {
 				saveString += SPLIT_CHAR.ToString() + enemyTypes[i].objectID;
 			}
 		}
+		saveString += SPLIT_CHAR.ToString() + trigger.size.x;
 		return saveString;
 	}
 
@@ -168,14 +175,26 @@ public class EnemySpawner : LevelObject {
 
 		for(int i = 0; i < num; i++){
 			var objectID = int.Parse(data[16 + i]);
-			var enemyPrefab = (Enemy)LevelObjectMap.instance.GetPrefab(objectID);
+			var enemyPrefab = (Enemy)LevelObjectMap.Instance.GetPrefab(objectID);
 			enemys.Add(enemyPrefab);
 		}
+
+		var index = 16 + num;
+		trigger.size = new Vector2(index < data.Length ? float.Parse(data[index]) : 10.0f, trigger.size.y);
+
 		enemyTypes = enemys.ToArray();
 		
 	}
 	public override Vector3 GetOffset ()
 	{
 		return Vector3.zero;
+	}
+	private void RestartLevel()
+	{
+		ClearEnemies();
+
+		barriers[0].GetComponent<SpriteRenderer>().color = Color.clear;
+		barriers[0].GetComponent<BoxCollider2D>().enabled = false;
+		gameObject.SetActive(true);
 	}
 }

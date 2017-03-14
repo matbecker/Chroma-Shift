@@ -2,10 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using DG.Tweening;
+using DG.DemiLib;
 
 public static class HelperFunctions {
 
 	public static LayerMask collidableLayers = 1 << LayerMask.NameToLayer("Collidable");
+	public static int collidableLayerId = LayerMask.NameToLayer("Collidable");
 	private static bool shrink = true;
 
 	public static IEnumerator TransitionTransparency(Image img, float duration)
@@ -17,12 +20,6 @@ public static class HelperFunctions {
 			img.CrossFadeAlpha(1.0f, duration, false);
 			yield return new WaitForSeconds(duration);
 		}
-	}
-	public static void ColourLerp(GameObject obj, Color start, Color end, float duration, float timer)
-	{
-		obj.GetComponent<SpriteRenderer>().color = Color.Lerp(start, end, duration);
-
-		timer += Time.deltaTime / duration;
 	}
 	public static Vector3 ArcTowards(Transform start, Transform end, float angle)
 	{
@@ -47,16 +44,33 @@ public static class HelperFunctions {
 		return val;
 	}
 
-	public static bool GroundCheck(EdgeCollider2D col)
+	public static bool GroundCheck(EdgeCollider2D col, Rigidbody2D rb)
 	{
-		return Physics2D.OverlapCircle(col.bounds.center - col.bounds.extents, 0.1f, collidableLayers);
+		var point = (rb.gravityScale >= 0) ? (Vector2)col.transform.position + col.offset : (Vector2)col.transform.position - col.offset;
+		return Physics2D.OverlapCircle(point, 0.1f, collidableLayers);
+		//var leftPoint = (Vector2)col.transform.position + col.offset - (Vector2)col.bounds.extents + new Vector2(0.1f, 0f);
+		//var rightPoint = (Vector2)col.transform.position + col.offset + (Vector2)col.bounds.extents - new Vector2(0.1f, 0f);
+		//return Physics2D.OverlapArea(leftPoint, rightPoint, collidableLayers);
+//		var hits = new List<RaycastHit2D>();
+//		hits.AddRange(Physics2D.RaycastAll(leftPoint, new Vector2(0, -0.05f)));
+//		hits.AddRange(Physics2D.RaycastAll(rightPoint, new Vector2(0, -0.05f)));
+//
+//		for(int i = 0; i < hits.Count; i++)
+//		{
+//			var hit = hits[i];
+//			if(hit.collider != null && hit.collider.IsTouchingLayers(collidableLayers))
+//				return true;
+//		}
+//		return false;
+		//return (leftHit.collider != null && leftHit.collider.IsTouchingLayers(collidableLayers)) 
+		//	|| (rightHit.collider != null && rightHit.collider.IsTouchingLayers(collidableLayers));
 	}
-	public static bool WallCheck(BoxCollider2D col, Transform transform, bool left)
+	public static bool WallCheck(BoxCollider2D col, Transform transform, bool facingRight)
 	{
-		if (left)
-			return Physics2D.OverlapCircle(new Vector2(transform.position.x - col.bounds.extents.x, transform.position.y + col.bounds.extents.y), 0.1f, collidableLayers);
+		if (facingRight)
+			return Physics2D.OverlapCircle(new Vector2(transform.position.x + col.bounds.extents.x, transform.position.y), 0.05f, collidableLayers);
 		else
-			return Physics2D.OverlapCircle(new Vector2(transform.position.x + col.bounds.extents.x, transform.position.y + col.bounds.extents.y), 0.1f, collidableLayers);
+			return Physics2D.OverlapCircle(new Vector2(transform.position.x - col.bounds.extents.x, transform.position.y), 0.05f, collidableLayers);
 	}
 
 	public static Color ColorLerp(Color currentColor, Color desiredColor, float duration)
@@ -74,69 +88,15 @@ public static class HelperFunctions {
 		return currentColor;
 	}
 
-	public static void FlipScaleX(GameObject obj, bool facingRight)
+	public static void FlipScale(GameObject obj, bool facingRight)
 	{
-		if (facingRight)
-			obj.transform.localScale = new Vector3(1.0f, 1.0f,1.0f);
-		else
-			obj.transform.localScale = new Vector3(-1.0f, 1.0f, 1.0f);
+		var rb = obj.GetComponent<Rigidbody2D>();
+		var y = (rb.gravityScale >= 0) ? 1.0f : -1.0f;
+		var x = (facingRight) ? 1.0f : -1.0f;
+
+		obj.transform.DOScale(new Vector3(x,y,1.0f),0.5f);
 	}
-
-	public static bool CompareColour(ColourManager.ColourType playerColour, ColourManager.ColourType enemyColour, bool isPlayer)
-	{
-		bool isSame;
-		bool isContrasting;
-
-		if (isPlayer)
-		{
-			isSame = false;
-
-			if (playerColour == enemyColour)
-				isSame = true;
-			else
-				isSame = false;
-
-			return isSame;
-		}
-		else
-		{
-			isContrasting = false;
-
-			switch (enemyColour)
-			{
-			case ColourManager.ColourType.Purple:
-				if (playerColour == ColourManager.ColourType.Yellow)
-					isContrasting = true;
-				break;
-			case ColourManager.ColourType.Blue:
-				if (playerColour == ColourManager.ColourType.Orange)
-					isContrasting = true;
-				break;
-			case ColourManager.ColourType.Green:
-				if (playerColour == ColourManager.ColourType.Red)
-					isContrasting = true;
-				break;
-			case ColourManager.ColourType.Yellow:
-				if (playerColour == ColourManager.ColourType.Purple)
-					isContrasting = true;
-				break;
-			case ColourManager.ColourType.Orange:
-				if (playerColour == ColourManager.ColourType.Blue)
-					isContrasting = true;
-				break;
-			case ColourManager.ColourType.Red:
-				if (playerColour == ColourManager.ColourType.Green)
-					isContrasting = true;
-				break;
-				default:
-				break;
-
-				return isContrasting;
-			}
-				
-		}
-		return false;
-	}
+		
 	public static bool IsSameColour(ColourManager.ColourType typeA, ColourManager.ColourType typeB)
 	{
 		if (typeA == typeB)
