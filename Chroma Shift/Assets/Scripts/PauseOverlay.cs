@@ -4,6 +4,7 @@ using UnityEngine.SceneManagement;
 using DG.DemiLib;
 using DG.Tweening;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class PauseOverlay : MonoBehaviour {
 
@@ -23,6 +24,11 @@ public class PauseOverlay : MonoBehaviour {
 	[SerializeField] Image sprite;
 	[SerializeField] GameObject buttonPanel;
 	[SerializeField] Animator anim;
+
+	public delegate void FreezeEvent();
+	public event FreezeEvent Freeze;
+	public event FreezeEvent UnFreeze;
+
 
 	// Use this for initialization
 	void Start () 
@@ -45,7 +51,10 @@ public class PauseOverlay : MonoBehaviour {
 
 			if (isPaused)
 			{
-				
+				if (Freeze != null)
+				{
+					Freeze();
+				}
 				buttonPanel.transform.DOScale(Vector3.one, 2.0f).SetDelay(3.0f).SetEase(Ease.OutBounce, 0.5f);
 				sprite.DOColor(new Color(1,1,1,0.7f), 2.0f).OnComplete(() => {
 					
@@ -57,7 +66,11 @@ public class PauseOverlay : MonoBehaviour {
 			}
 			else
 			{
-				buttonPanel.transform.DOScale(Vector3.zero, 1.0f);
+				if (UnFreeze != null)
+				{
+					UnFreeze();
+				}
+				buttonPanel.transform.DOScale(Vector3.zero, 0.5f);
 				sprite.DOColor(Color.clear, 2.0f);
 				CameraBehaviour.Instance.ExitPauseScreen();
 				PlayerUI.Instance.canvas.sortingOrder = 10;
@@ -70,9 +83,9 @@ public class PauseOverlay : MonoBehaviour {
  	}
 	public void Restart()
 	{
-		LoadingScreen.Instance.DisplayLoadingScreen(false);
+		LoadingScreen.Instance.DisplayLoadingScreen(LoadingScreen.ScreenState.Restart);
 		TogglePause();
-		anim.SetTrigger("Normal");
+
 	}
 	public void LoadScene(string sceneName)
 	{

@@ -70,9 +70,11 @@ public class LevelSelectScreen : MonoBehaviour {
 		}
 		if (levelButtons[index].id == index && !levelButtons[index].isLocked)
 		{
-			CharacterSelectScreen.currentLevelName = levelButtons[index].levelNameString;
+			LevelLoader.Instance.currentLevelName = levelButtons[index].levelNameString;
 			LevelLoader.Instance.currentLevelId = index;
-			SceneManager.LoadScene("CharacterSelectScreen");
+			MainMenu.Instance.toCharacterSelect = true;
+			LoadingScreen.Instance.DisplayLoadingScreen(LoadingScreen.ScreenState.Menu);
+
 		}
 		else
 		{

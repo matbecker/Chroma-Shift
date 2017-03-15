@@ -50,13 +50,9 @@ public class Projectile : MonoBehaviour {
 		if(dmg != null) {
 			dmg.Damage(damage);
 		}
-
+		Destroy(projectileFx[(int)hero.colour.currentColourType], 5.0f);
 		projectileFx[(int)hero.colour.currentColourType].transform.parent = null;
 		projectileFx[(int)hero.colour.currentColourType].Stop();
-		for (int i = 0; i < projectileFx.Length; i++)
-		{
-			Destroy(projectileFx[i], 4.0f);
-		}
 		Debug.Log(other.gameObject.name);
 		Destroy(gameObject);
 	}

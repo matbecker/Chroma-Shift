@@ -5,6 +5,18 @@ using UnityEngine.UI;
 
 public class MainMenu : MonoBehaviour {
 
+	private static MainMenu instance;
+	public static MainMenu Instance
+	{
+		get
+		{
+			if (!instance)
+				instance = GameObject.FindObjectOfType(typeof(MainMenu)) as MainMenu;
+
+			return instance;
+		}
+	}
+
 	public InputField roomNameInput;
 	[SerializeField] GameObject[] screens;
 	int currentScreen;
@@ -14,6 +26,9 @@ public class MainMenu : MonoBehaviour {
 	private float animTimer;
 	private bool delay;
 	private Coroutine delayCor;
+	public bool toCharacterSelect;
+	public bool toLevelEditor;
+
 
 
 	void Start () 
@@ -21,18 +36,13 @@ public class MainMenu : MonoBehaviour {
 		currentScreen = 0;
 		animTimer = 0.0f;
 		delayCor = null;
+		toLevelEditor = false;
 	}
-	
-	public void LoadCharacterSelect()
-	{
-		if (PhotonNetwork.offlineMode)
-			SceneManager.LoadScene("CharacterSelectScreen");
-		else
-			PhotonNetwork.LoadLevel("CharacterSelectScreen");
-	}
+
 	public void LoadLevelEditor()
 	{
-		SceneManager.LoadScene("LevelEditor");
+		toLevelEditor = true;
+		LoadingScreen.Instance.DisplayLoadingScreen(LoadingScreen.ScreenState.Menu);
 	}
 
 	public void SwitchScreen(int newScreenIndex)

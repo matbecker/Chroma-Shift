@@ -6,7 +6,7 @@ using System;
 
 public class LevelLoader : MonoBehaviour {
 
-	private string currentLevelName;
+	public string currentLevelName;
 	public int currentLevelId;
 	private static LevelLoader instance;
 	public static LevelLoader Instance

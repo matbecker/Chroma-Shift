@@ -7,11 +7,12 @@ using UnityEngine.UI;
 public class CharacterSelectScreen : Photon.MonoBehaviour {
 
 	public Transform heroPosition;
-	public static string currentLevelName;
+	//public static string currentLevelName;
 	private List<GameObject> characters;
 	[SerializeField] bool isFocusedScreen;
 	[SerializeField] Text characterText;
 	private int currentHero;
+	public static bool toGame;
 	// Use this for initialization
 	void Start () 
 	{
@@ -34,8 +35,22 @@ public class CharacterSelectScreen : Photon.MonoBehaviour {
 			}
 			currentHero = 0;
 			characters[0].SetActive(true);
+
+
+		}
+		if (LoadingScreen.Instance)
+		{
+			LoadingScreen.Instance.Begin += Begin;
 		}
 
+
+	}
+	private void OnDestroy()
+	{
+		if (LoadingScreen.Instance)
+		{
+			LoadingScreen.Instance.Begin -= Begin;
+		}
 	}
 
 	public void NextHero()
@@ -84,17 +99,12 @@ public class CharacterSelectScreen : Photon.MonoBehaviour {
 			var colour = characters[currentHero].GetComponentInChildren<ColourManager>();
 			HeroManager.Instance.currentColorType = colour.currentColourType;
 			HeroManager.Instance.currentShadeIndex = colour.shadeIndex;
-
-			LevelLoader.Instance.LoadLevel(currentLevelName);
-//			if (PhotonNetwork.offlineMode)
-//				//SceneManager.LoadScene("Level1");
-//			else
-//			{
-//				//PhotonNetwork.LoadLevel("Level1");
-//				//PhotonNetwork.automaticallySyncScene = true;
-//			}
-			
-
+			LoadingScreen.Instance.DisplayLoadingScreen(LoadingScreen.ScreenState.Menu);
+			LevelLoader.Instance.LoadLevel(LevelLoader.Instance.currentLevelName);
 		}
+	}
+	private void Begin()
+	{
+		//LevelLoader.Instance.LoadLevel(LevelLoader.Instance.currentLevelName);
 	}
 }
