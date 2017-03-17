@@ -19,6 +19,7 @@ public class StickyPlatform : LevelObject {
 		{
 			hasCollided = true;
 			var rb = hero.GetComponent<Rigidbody2D>();
+
 			if (rb.gravityScale == -1)
 				rb.velocity = Vector2.zero;
 			

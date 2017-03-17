@@ -17,7 +17,7 @@ public class LevelManager : Photon.MonoBehaviour {
 		public string name;
 		public float[] rankTimes;
 	}
-	[SerializeField] Levels[] levels;
+	public Levels[] levels;
 	public Dictionary<string,float> levelTimeDict;
 	private int levelIndex;
 	public float levelTimer;
@@ -35,6 +35,8 @@ public class LevelManager : Photon.MonoBehaviour {
 	public delegate void RestartLevel();
 	public event RestartLevel Restart;
 
+	private bool inMenu;
+
 	private static LevelManager instance;
 	public static LevelManager Instance
 	{
@@ -47,18 +49,24 @@ public class LevelManager : Photon.MonoBehaviour {
 		}
 	}
 
-
-
-
-	private void Awake()
+	private void Start()
 	{
+		DontDestroyOnLoad(gameObject);
+
+		if (FindObjectsOfType(GetType()).Length > 1)
+		{
+			Destroy(gameObject);
+		}
 		levelTimeDict = new Dictionary<string, float>();
-		levelIndex = LevelLoader.Instance.currentLevelId;
 		LevelLoader.Instance.OnLevelLoaded += OnLevelLoaded;
+		inMenu = true;
+		LoadLevelTimes();
 	}
 
 	void OnLevelLoaded(Dictionary<int, List<LevelObject>> objectLists) 
 	{
+		inMenu = false;
+		levelIndex = LevelLoader.Instance.currentLevelId;
 		levelTimer = levels[levelIndex].rankTimes[3];
 		currentSpawnPoint = null;//spawnPoints[spawnPointIndex];
 
@@ -119,7 +127,7 @@ public class LevelManager : Photon.MonoBehaviour {
 
 	public void NextLevel()
 	{
-		Save();
+		SaveLevelTimes();
 		levelIndex++;
 		LevelLoader.Instance.LoadLevel(levels[levelIndex].name);
 
@@ -133,36 +141,51 @@ public class LevelManager : Photon.MonoBehaviour {
 	}
 	public void FinishedLevel()
 	{
+		var levelName = levels[levelIndex].name;
 		var levelTime = levels[levelIndex].rankTimes[3] - levelTimer;
-		levelTimeDict.Add(levels[levelIndex].name, levelTime);
 
+		if(levelTimeDict.ContainsKey(levelName)) {
+			if(levelTime < levelTimeDict[levelName])
+				levelTimeDict[levelName] = levelTime;
+		} else 
+			levelTimeDict.Add(levelName, levelTime);
+
+		//PlayerPrefs.SetFloat("Level_" + levels[levelIndex], levelTime);
 		startTimer = false;
 	}
-	public void Save()
+	public void SaveLevelTimes()
 	{
 		var path = Application.streamingAssetsPath + "/LevelTimes/levelTimes.txt";
 
-		if (path.Length != 0)
+		var sb = new System.Text.StringBuilder();
+
+		foreach(var level in levelTimeDict)
+			sb.AppendLine(level.Key + "_" + level.Value);
+		
+		System.IO.File.WriteAllText(path, sb.ToString());
+	}
+
+	public void LoadLevelTimes()
+	{
+		var path = Application.streamingAssetsPath + "/LevelTimes/levelTimes.txt";
+
+		levelTimeDict.Clear();
+
+		var file = System.IO.File.ReadAllLines(path);
+		foreach(var line in file)
 		{
-			var sb = new System.Text.StringBuilder();
-
-			sb.AppendLine(GetSaveString());
-
-//			for (int i = 0; i < levelTimeDict.Count; i++)
-//			{
-//				
-//			}
-			System.IO.File.WriteAllText(path, sb.ToString());
-
+			if (string.IsNullOrEmpty(line)) continue;
+			var data = line.Split('_');
+			levelTimeDict.Add(data[0], float.Parse(data[1]));
 		}
 	}
-	public string GetSaveString()
-	{
-		return string.Join("_", new []{levels[levelIndex].name, levelTimeDict[levels[levelIndex].name].ToString()});
-	}
+
 	// Update is called once per frame
 	void Update () 
 	{
+		if (inMenu){
+			return;
+		}
 		if (startTimer)
 			levelTimer -= Time.deltaTime;
 

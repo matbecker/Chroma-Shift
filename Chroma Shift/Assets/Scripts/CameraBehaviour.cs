@@ -133,7 +133,9 @@ public class CameraBehaviour : MonoBehaviour {
 	{
 		child.transform.DOShakePosition(duration,new Vector3(xSeverity, ySeverity, child.transform.position.z), 10, 0, false).OnComplete(() => {
 			if (lerp)
-				child.transform.DOMove(transform.position, 0.5f,false);
+				DOTween.To(() => 0f, t => {
+					child.transform.transform.position = Vector3.Lerp(child.transform.position, transform.position, t);
+				}, 1f, 0.5f);
 		});
 	}
 

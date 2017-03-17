@@ -3,16 +3,35 @@ using System.Collections;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using DG.Tweening;
+using DG.DemiLib;
 
 public class CharacterSelectScreen : Photon.MonoBehaviour {
+
+	[System.Serializable]
+	public class Layout
+	{
+		public Color[] colors;
+	}
+	public Layout[] layouts;
 
 	public Transform heroPosition;
 	//public static string currentLevelName;
 	private List<GameObject> characters;
 	[SerializeField] bool isFocusedScreen;
 	[SerializeField] Text characterText;
+	[SerializeField] Animator anim;
+	[SerializeField] Image[] uiSprites;
+	[SerializeField] Button[] horizontalButtons;
+	private int hIndex;
+	[SerializeField] Button[] verticalButtons;
+	private int vIndex;
+	[SerializeField] EventSystem es;
 	private int currentHero;
 	public static bool toGame;
+	private float timer;
+
 	// Use this for initialization
 	void Start () 
 	{
@@ -37,6 +56,14 @@ public class CharacterSelectScreen : Photon.MonoBehaviour {
 			characters[0].SetActive(true);
 
 
+		}
+		for (int i = 0; i < uiSprites.Length; i++)
+		{
+			uiSprites[i].DOColor(layouts[0].colors[i], 0.0f);
+		}
+		if (InputManager.Instance)
+		{
+			InputManager.Instance.SwitchButton += SwitchButton;
 		}
 		if (LoadingScreen.Instance)
 		{
@@ -66,6 +93,10 @@ public class CharacterSelectScreen : Photon.MonoBehaviour {
 			HeroManager.Instance.heroIndex = currentHero;
 			characterText.text = HeroManager.Instance.heroes[currentHero].type.ToString();
 		}
+		for (int i = 0; i < uiSprites.Length; i++)
+		{
+			uiSprites[i].DOColor(layouts[(int)characters[currentHero].GetComponent<Hero>().colour.currentColourType].colors[i], 1.0f);
+		}
 
 	}
 	public void PreviousHero()
@@ -81,11 +112,20 @@ public class CharacterSelectScreen : Photon.MonoBehaviour {
 			HeroManager.Instance.heroIndex = currentHero;
 			characterText.text = HeroManager.Instance.heroes[currentHero].type.ToString();
 		}
+		for (int i = 0; i < uiSprites.Length; i++)
+		{
+			uiSprites[i].DOColor(layouts[(int)characters[currentHero].GetComponent<Hero>().colour.currentColourType].colors[i], 1.0f);
+		}
 	}
 	public void NextColour()
 	{
 		if (isFocusedScreen)
 			characters[currentHero].GetComponentInChildren<Hero>().SwitchColour();
+
+		for (int i = 0; i < uiSprites.Length; i++)
+		{
+			uiSprites[i].DOColor(layouts[(int)characters[currentHero].GetComponent<Hero>().colour.currentColourType].colors[i], 1.0f);
+		}
 	}
 	public void NextShade()
 	{
@@ -106,5 +146,79 @@ public class CharacterSelectScreen : Photon.MonoBehaviour {
 	private void Begin()
 	{
 		//LevelLoader.Instance.LoadLevel(LevelLoader.Instance.currentLevelName);
+	}
+	public void PlayArrowAnimation()
+	{
+		
+	}
+	private void SwitchButton(float axis)
+	{
+		
+	}
+	private void Update()
+	{
+		timer += Time.deltaTime;
+		var horizontalAxis = Input.GetAxis("SwitchButtonH");
+		var verticalAxis = Input.GetAxis("SwitchButtonV");
+
+		if (horizontalAxis != 0)
+		{
+			if (horizontalAxis < 0)
+			{
+				if (timer > 0.2f)
+				{
+					hIndex++;
+					timer = 0.0f;
+				}
+
+			}
+			else if (horizontalAxis > 0)
+			{
+				if (timer > 0.2f)
+				{
+					hIndex--;
+					timer = 0.0f;
+				}
+			}
+			if (hIndex < 0)
+			{
+				hIndex = horizontalButtons.Length;
+			}
+			if (hIndex > horizontalButtons.Length)
+			{
+				hIndex = 0;
+			}
+			es.SetSelectedGameObject(horizontalButtons[hIndex].gameObject);
+
+		}
+		if (verticalAxis != 0)
+		{
+			if (verticalAxis < 0)
+			{
+				if (timer > 0.2f)
+				{
+					vIndex++;
+					timer = 0.0f;
+				}
+
+			}
+			else if (verticalAxis > 0)
+			{
+				if (timer > 0.2f)
+				{
+					vIndex--;
+					timer = 0.0f;
+				}
+			}
+			if (vIndex < 0)
+			{
+				vIndex = horizontalButtons.Length;
+			}
+			if (vIndex > horizontalButtons.Length)
+			{
+				vIndex = 0;
+			}
+			es.SetSelectedGameObject(verticalButtons[vIndex].gameObject);
+		}
 	}
 }

@@ -19,7 +19,7 @@ public class LevelSelectScreen : MonoBehaviour {
 		public bool isLocked;
 	}
 	public LevelButton[] levelButtons;
-	public Dictionary<string,float> levelTimeDict;
+	//public Dictionary<string,float> levelTimeDict;
 	[SerializeField] Image lockImage;
 	[SerializeField] Color[] starColours;
 	[SerializeField] Sprite[] levelPictures;
@@ -40,7 +40,6 @@ public class LevelSelectScreen : MonoBehaviour {
 	// Use this for initialization
 	void Start () 
 	{
-		levelTimeDict = new Dictionary<string, float>();
 
 		foreach (LevelButton button in levelButtons)
 		{
@@ -54,10 +53,14 @@ public class LevelSelectScreen : MonoBehaviour {
 			else
 			{
 				button.levelPicture.sprite = levelPictures[button.id];
+				button.bestTime.text = LevelManager.Instance.levelTimeDict[button.levelNameString].ToString("F2");
+
+				//TODO set star colours up
+				//switch (LevelManager.Instance.levels[button.id].rankTimes)
 			}
 		}
 	}
-	
+
 	// Update is called once per frame
 	void Update () {
 	
@@ -90,27 +93,5 @@ public class LevelSelectScreen : MonoBehaviour {
 		levelButton.currentStarRating.color = Color.clear;
 		levelButton.levelName.text = "???";
 		levelButton.levelPicture.sprite = lockImage.sprite;
-	}
-	public void Load()
-	{
-		var path = Application.streamingAssetsPath + "/LevelTimes/levelTimes.txt";
-		//var path = 
-		if (path.Length != 0)
-		{
-			var data = System.IO.File.ReadAllText(path);
-
-			var lines = data.Split(new []{'\n'}, System.StringSplitOptions.RemoveEmptyEntries);
-
-			for (int i = 0; i < lines.Length; i++)
-			{
-				var s = lines[i].Split(LevelObject.SPLIT_CHAR);
-				var id = int.Parse(s[0]);
-				var name = s[0];
-				var time = s[1];
-
-				//var obj = creator(id);
-				//obj.LoadSaveData(lines[i]);
-			}
-		}
 	}
 }

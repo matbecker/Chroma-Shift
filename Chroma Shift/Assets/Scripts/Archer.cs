@@ -13,8 +13,12 @@ public class Archer : Hero {
 	{
 		base.Start ();
 
-		if(photonView.isMine)
+		if (InputManager.Instance)
+		{
 			InputManager.Instance.TrackMouseEvent += TrackMouseEvent;
+			InputManager.Instance.RotateBow += RotateBow;
+		}
+
 
 		shield.GetComponent<SpriteRenderer>().color = Color.clear;
 		bow.GetComponent<SpriteRenderer>().color = Color.white;
@@ -24,8 +28,11 @@ public class Archer : Hero {
 		base.OnDestroy ();
 
 		if (InputManager.Instance)
-			if(photonView.isMine)
-				InputManager.Instance.TrackMouseEvent -= TrackMouseEvent;
+		{
+			InputManager.Instance.TrackMouseEvent -= TrackMouseEvent;
+			InputManager.Instance.RotateBow -= RotateBow;
+		}
+			
 	}
 	//method for the archers attack
 	protected override void Attack ()
@@ -105,5 +112,19 @@ public class Archer : Hero {
 
 		var block = (canBlock) ? true : false;
 		shield.SetActive(block);
+	}
+	private void RotateBow(float axis)
+	{
+		var currentRot = transform.localEulerAngles.z;
+
+		if (axis == 0)
+			return;
+
+		if (axis != 0)
+			currentRot = (axis * 90);
+
+		currentRot = Mathf.Clamp(currentRot, 0, 90);
+	
+		bow.transform.localEulerAngles = new Vector3(0.0f, 0.0f, currentRot);
 	}
 }

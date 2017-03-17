@@ -24,6 +24,7 @@ public class EnemySpawner : LevelObject, IProjectileIgnore {
 	[SerializeField] GameObject spawnerManager;
 	[SerializeField] BoxCollider2D trigger;
 	[SerializeField] ParticleSystem[] enemyParticles;
+	private Hero h;
 
 	// Use this for initialization
 	void Awake()
@@ -58,8 +59,10 @@ public class EnemySpawner : LevelObject, IProjectileIgnore {
 	
 	void OnTriggerEnter2D(Collider2D other)
 	{
-		if (other.CompareTag("Player") && !hasWaveStarted)
+		var hero = other.GetComponent<Hero>();
+		if (hero != null && !hasWaveStarted)
 		{
+			h = hero;
 			for (int i = 0; i < barriers.Length; i++)
 			{
 				var s = barriers[i].GetComponent<SpriteRenderer>();
@@ -88,10 +91,20 @@ public class EnemySpawner : LevelObject, IProjectileIgnore {
 			PauseOverlay.Instance.canPause = false;
 		}
 	}
+	void OnTriggerExit2D(Collider2D other)
+	{
+		
+	}
 	void Update()
 	{
 		if (hasWaveStarted)
 		{
+			Vector3 dist = transform.position - h.transform.position;
+
+			if (dist.magnitude > 10)
+			{
+				ClearEnemies();
+			}
 			
 			PlayerUI.Instance.currentEnemiesBottom.text = enemyWave.Count.ToString();
 			PlayerUI.Instance.currentEnemiesTop.text = enemyWave.Count.ToString();
@@ -117,6 +130,7 @@ public class EnemySpawner : LevelObject, IProjectileIgnore {
 			hasWaveStarted = false;
 			PauseOverlay.Instance.canPause = true;
 		}
+
 
 	}
 	public static void ClearEnemies()

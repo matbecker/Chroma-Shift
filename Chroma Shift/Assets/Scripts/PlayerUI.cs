@@ -22,6 +22,7 @@ public class PlayerUI : Photon.MonoBehaviour {
 
 	[SerializeField] Hero hero;
 	[SerializeField] Image healthBar;
+	public Image[] healthBarGlow;
 	[SerializeField] GameObject[] colourShifts;
 	[SerializeField] Text levelTimeTextTop;
 	[SerializeField] Text levelTimeTextBottom;
@@ -45,16 +46,13 @@ public class PlayerUI : Photon.MonoBehaviour {
 	void OnHeroSpawned(Hero hero) 
 	{
 		this.hero = hero;
-		InputManager.Instance.SwitchColour += SwitchHealthBarColour;
-		InputManager.Instance.SwitchShade += SwitchHealthBarShade;
+
+		SetHealthBarColour(Color.black, true);
+		SetHealthBarGlow();
+
 		InputManager.Instance.Pause += Pause;
 
-		healthBar.color = hero.sprite.color;
-
-		for (int i = 0; i < hero.stats.colourShifts; i++)
-		{
-			colourShifts[i].SetActive(true);
-		}
+		SetColourShifts();
 
 		currentEnemiesTop.color = Color.clear;
 		currentEnemiesBottom.color = Color.clear;
@@ -65,6 +63,7 @@ public class PlayerUI : Photon.MonoBehaviour {
 	void Awake() 
 	{
 		LevelManager.Instance.OnHeroSpawned += OnHeroSpawned;
+
 	}
 
 	// Use this for initialization
@@ -83,14 +82,17 @@ public class PlayerUI : Photon.MonoBehaviour {
 	{
 		if (InputManager.Instance)
 		{
-			InputManager.Instance.SwitchColour -= SwitchHealthBarColour;
-			InputManager.Instance.SwitchShade -= SwitchHealthBarShade;
 			InputManager.Instance.Pause -= Pause;
 		}
 	}
 
 	// Update is called once per frame
 	void Update () 
+	{
+		levelTimeTextBottom.text = LevelManager.Instance.levelTimer.ToString("F2");
+		levelTimeTextTop.text = levelTimeTextBottom.text;
+	}
+	public void SetColourShifts()
 	{
 		if(hero == null) 
 			return;
@@ -99,53 +101,59 @@ public class PlayerUI : Photon.MonoBehaviour {
 		{
 		case 0:
 			colourShifts[0].SetActive(false);
+			colourShifts[1].SetActive(false);
+			colourShifts[2].SetActive(false);
+			colourShifts[3].SetActive(false);
+			colourShifts[4].SetActive(false);
 			break;
 		case 1:
 			colourShifts[0].SetActive(true);
 			colourShifts[1].SetActive(false);
+			colourShifts[2].SetActive(false);
+			colourShifts[3].SetActive(false);
+			colourShifts[4].SetActive(false);
 			break;
 		case 2:
+			colourShifts[0].SetActive(true);
 			colourShifts[1].SetActive(true);
 			colourShifts[2].SetActive(false);
+			colourShifts[3].SetActive(false);
+			colourShifts[4].SetActive(false);
 			break;
 		case 3:
+			colourShifts[0].SetActive(true);
+			colourShifts[1].SetActive(true);
 			colourShifts[2].SetActive(true);
 			colourShifts[3].SetActive(false);
+			colourShifts[4].SetActive(false);
 			break;
 		case 4:
+			colourShifts[0].SetActive(true);
+			colourShifts[1].SetActive(true);
+			colourShifts[2].SetActive(true);
 			colourShifts[3].SetActive(true);
 			colourShifts[4].SetActive(false);
 			break;
 		case 5:
+			colourShifts[0].SetActive(true);
+			colourShifts[1].SetActive(true);
+			colourShifts[2].SetActive(true);
+			colourShifts[3].SetActive(true);
 			colourShifts[4].SetActive(true);
 			break;
 		default:
 			break;
 		}
-		 
-		healthBar.color =  new Color(hero.sprite.color.r,hero.sprite.color.g, hero.sprite.color.b, (float)hero.stats.currentHealth / (float)hero.stats.maxHealth);
-
-		levelTimeTextBottom.text = LevelManager.Instance.levelTimer.ToString("F2");
-		levelTimeTextTop.text = levelTimeTextBottom.text;
-
-		if (atEnd)
-		{
-//			transitionStep += Time.deltaTime;
-//			if (transitionStep >= transitionTotal)
-//			{
-//				TransitionTextColour();
-//			}
-			//levelTimeTextTop.color = Color.Lerp(titleColourStart, titleColourEnd, transitionStep / transitionTotal);
-		}
-	
 	}
-	private void SwitchHealthBarColour()
+	public void SetHealthBarGlow()
 	{
-		healthBar.color = hero.sprite.color;
+		for (int i =0; i < healthBarGlow.Length; i++)
+			healthBarGlow[i].color = hero.colour.colors[(int)hero.colour.currentColourType].color[i];
 	}
-	private void SwitchHealthBarShade()
+	public void SetHealthBarColour(Color color, bool atStart)
 	{
-		healthBar.color = hero.sprite.color;
+		var a = (atStart) ? hero.stats.maxHealth / hero.stats.maxHealth : (float)hero.stats.currentHealth / (float)hero.stats.maxHealth;
+		healthBar.color =  new Color(color.r,color.g, color.b, a);
 	}
 	private void RestartLevel()
 	{

@@ -42,6 +42,7 @@ public class Hero : Photon.MonoBehaviour, IProjectileIgnore {
 	[SerializeField] protected bool rangedAttack;
 	[SerializeField] SpriteRenderer[] glowRenderers;
 	[SerializeField] TrailRenderer tr;
+	[SerializeField] Gradient[] gradients;
 	protected bool startShieldTimer;
 	protected bool canBlock;
 	protected bool isBlocking;
@@ -144,10 +145,9 @@ public class Hero : Photon.MonoBehaviour, IProjectileIgnore {
 		//set the color to the players colour 
 		sprite.color = colour.GetCurrentColor();
 
-		foreach (SpriteRenderer sr in glowRenderers)
-		{
-			sr.color = colour.GetCurrentColor();
-		}
+		SetGlowRenderers(colour.GetCurrentColor(), 0.0f);
+		tr.colorGradient = gradients[(int)colour.currentColourType];
+
 	}
 
 	protected virtual void OnDestroy () 
@@ -283,6 +283,7 @@ public class Hero : Photon.MonoBehaviour, IProjectileIgnore {
 		}
 		if (isDamaged)
 		{
+			SetGlowRenderers(colour.GetCurrentColor(), 0.5f);
 			CooldownTimer += Time.deltaTime;
 			//anim.speed += 0.01f;
 			if (CooldownTimer > stats.damageCooldownTime)
@@ -364,6 +365,7 @@ public class Hero : Photon.MonoBehaviour, IProjectileIgnore {
 					Vector2 dir = (horizontalAxis > 0) ? stats.movementForce : -stats.movementForce;
 					facingRight = (horizontalAxis > 0) ? true : false;
 					rb.AddForce(dir);
+
 				}
 			}
 			HelperFunctions.FlipScale(gameObject, facingRight);
@@ -383,7 +385,6 @@ public class Hero : Photon.MonoBehaviour, IProjectileIgnore {
 				isAttacking = true;
 			}
 		}
-
 	}
 	//method to get overriden for each heroes attack
 	protected virtual void Attack(){}
@@ -534,6 +535,7 @@ public class Hero : Photon.MonoBehaviour, IProjectileIgnore {
 		if (other.collider.CompareTag("ShiftPowerUp") && stats.colourShifts < 5)
 		{
 			stats.colourShifts++;
+			PlayerUI.Instance.SetColourShifts();
 			Destroy(other.gameObject);
 		}
 	}
@@ -571,11 +573,13 @@ public class Hero : Photon.MonoBehaviour, IProjectileIgnore {
 			//set the sprites colour to equal what the new colour is
 			sprite.DOColor(colour.GetCurrentColor(), 0.5f);
 
-			foreach (SpriteRenderer sr in glowRenderers)
-			{
-				sr.DOColor(colour.GetCurrentColor(), 0.5f);
-			}
+			SetGlowRenderers(colour.GetCurrentColor(), 0.5f);
 
+			tr.colorGradient = gradients[(int)colour.currentColourType];
+				
+			if (PlayerUI.Instance)
+				PlayerUI.Instance.SetHealthBarGlow();
+			
 			//call the switch colour method over the network so players can see each others colour
 			if(photonView.isMine)
 				photonView.RPC("SwitchColour", PhotonTargets.OthersBuffered);
@@ -591,11 +595,9 @@ public class Hero : Photon.MonoBehaviour, IProjectileIgnore {
 		//set the colour of the shade to equal what the new shade is 
 		sprite.DOColor(colour.GetCurrentColor(), 0.5f);
 
-		foreach (SpriteRenderer sr in glowRenderers)
-		{
-			sr.DOColor(colour.GetCurrentColor(), 0.5f);
-		}
+		SetGlowRenderers(colour.GetCurrentColor(), 0.5f);
 
+		tr.colorGradient = gradients[(int)colour.currentColourType];
 		//call the switch shade method so the players can see each others shades
 		if(photonView.isMine)
 			photonView.RPC("SwitchShade", PhotonTargets.OthersBuffered);
@@ -609,6 +611,9 @@ public class Hero : Photon.MonoBehaviour, IProjectileIgnore {
 			CooldownTimer = 0.0f;
 			anim.SetBool("hurt", true);
 			isDamaged = true;
+
+			SetGlowRenderers(Color.clear, 0.1f);
+			PlayerUI.Instance.SetHealthBarColour(Color.black, false);
 		}
 	}
 	public void DisplayLoadingScreen()
@@ -622,5 +627,12 @@ public class Hero : Photon.MonoBehaviour, IProjectileIgnore {
 	private void UnFreeze()
 	{
 		disableInput = false;
+	}
+	private void SetGlowRenderers(Color colour, float duration)
+	{
+		foreach (SpriteRenderer sr in glowRenderers)
+		{
+			sr.DOColor(colour, duration);
+		}
 	}
 }

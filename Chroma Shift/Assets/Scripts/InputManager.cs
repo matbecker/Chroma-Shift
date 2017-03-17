@@ -45,6 +45,8 @@ public class InputManager : MonoBehaviour {
 	public event MouseEvent TrackMouseEvent;
 	public event KeyDownEvent CameraZoomIn;
 	public event KeyDownEvent CameraZoomOut;
+	public event AxisEvent RotateBow;
+	public event AxisEvent SwitchButton;
 
 	private void Awake()
 	{
@@ -141,6 +143,21 @@ public class InputManager : MonoBehaviour {
 		if (VerticalMovement != null)
 		{
 			VerticalMovement(Input.GetAxis("Vertical"));
+		}
+		if (RotateBow != null)
+		{
+			RotateBow(Input.GetAxis("Vertical"));
+		}
+		if (SwitchButton != null)
+		{
+			if (Input.GetAxis("SwitchButtonH") != 0)
+			{
+				SwitchButton(Input.GetAxis("SwitchButtonH"));
+			}
+			else if (Input.GetAxis("SwitchButtonV") != 0)
+			{
+				SwitchButton(Input.GetAxis("SwitchButtonV"));
+			}
 		}
 	}
 }

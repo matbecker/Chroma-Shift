@@ -85,7 +85,6 @@ public class PauseOverlay : MonoBehaviour {
 	{
 		LoadingScreen.Instance.DisplayLoadingScreen(LoadingScreen.ScreenState.Restart);
 		TogglePause();
-
 	}
 	public void LoadScene(string sceneName)
 	{
